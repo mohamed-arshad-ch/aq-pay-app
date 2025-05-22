@@ -1,8 +1,15 @@
-"use client"
-import { MoreHorizontal, Shield, User } from "lucide-react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+"use client";
+import { MoreHorizontal, Shield } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,65 +17,49 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+} from "@/components/ui/dropdown-menu";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAppSelector } from "@/store/hooks";
+import { useEffect } from "react";
+import { useAppDispatch } from "@/store/hooks";
+import { fetchUsers, type User as UserType } from "@/store/slices/usersSlice";
+import { User as UserIcon } from "lucide-react";
 
-const recentUsers = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    role: "User",
-    status: "Active",
-    joinDate: "2023-05-10T10:30:00Z",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    role: "User",
-    status: "Active",
-    joinDate: "2023-05-09T16:45:00Z",
-  },
-  {
-    id: "3",
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    role: "User",
-    status: "Pending",
-    joinDate: "2023-05-08T09:15:00Z",
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    role: "User",
-    status: "Inactive",
-    joinDate: "2023-05-05T14:20:00Z",
-  },
-  {
-    id: "5",
-    name: "Robert Wilson",
-    email: "robert.wilson@example.com",
-    role: "User",
-    status: "Active",
-    joinDate: "2023-05-04T11:10:00Z",
-  },
-]
+export function AdminRecentUsers({
+  isLoading = false,
+}: {
+  isLoading?: boolean;
+}) {
+  const dispatch = useAppDispatch();
+  const users = useAppSelector((state) => state.users?.data);
 
-export function AdminRecentUsers({ isLoading = false }: { isLoading?: boolean }) {
+  useEffect(() => {
+    dispatch(fetchUsers());
+  }, [dispatch]);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Recent Users</CardTitle>
-        <CardDescription>Recently registered users in the system.</CardDescription>
+        <CardDescription>
+          Recently registered users in the system.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center space-x-4 rounded-md border p-4">
+              <div
+                key={i}
+                className="flex items-center space-x-4 rounded-md border p-4"
+              >
                 <Skeleton className="h-12 w-12 rounded-full" />
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-[250px]" />
@@ -76,6 +67,10 @@ export function AdminRecentUsers({ isLoading = false }: { isLoading?: boolean })
                 </div>
               </div>
             ))}
+          </div>
+        ) : !users || users.length === 0 ? (
+          <div className="flex items-center justify-center h-32">
+            <p className="text-muted-foreground">No recent users available</p>
           </div>
         ) : (
           <div className="rounded-md border">
@@ -90,16 +85,18 @@ export function AdminRecentUsers({ isLoading = false }: { isLoading?: boolean })
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentUsers.map((user) => (
+                {users.slice(0, 5).map((user: UserType) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                          <User className="h-5 w-5 text-muted-foreground" />
+                          <UserIcon className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
                           <div className="font-medium">{user.name}</div>
-                          <div className="text-sm text-muted-foreground">{user.email}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.email}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -116,14 +113,16 @@ export function AdminRecentUsers({ isLoading = false }: { isLoading?: boolean })
                           user.status === "Active"
                             ? "bg-green-50 text-green-700 border-green-200"
                             : user.status === "Pending"
-                              ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                              : "bg-gray-50 text-gray-700 border-gray-200"
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                            : "bg-gray-50 text-gray-700 border-gray-200"
                         }
                       >
                         {user.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(user.joinDate).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {new Date(user.joinDate).toLocaleDateString()}
+                    </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -140,7 +139,9 @@ export function AdminRecentUsers({ isLoading = false }: { isLoading?: boolean })
                           <DropdownMenuItem>Reset Password</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600">
-                            {user.status === "Active" ? "Deactivate User" : "Activate User"}
+                            {user.status === "Active"
+                              ? "Deactivate User"
+                              : "Activate User"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -153,5 +154,5 @@ export function AdminRecentUsers({ isLoading = false }: { isLoading?: boolean })
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

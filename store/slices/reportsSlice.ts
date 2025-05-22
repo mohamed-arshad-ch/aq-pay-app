@@ -212,34 +212,23 @@ export const fetchUserGrowthData = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      // Mock API call
-      const response = {
-        labels: [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "May",
-          "Jun",
-          "Jul",
-          "Aug",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dec",
-        ],
+      // In a real app, we would call an actual endpoint
+      // const response = await adminApi.getUserGrowthData(dateRange)
+
+      // Return empty data structure
+      return {
+        labels: [],
         datasets: [
           {
             label: "New Users",
-            data: [30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90],
+            data: [],
           },
           {
             label: "Active Users",
-            data: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320],
+            data: [],
           },
         ],
       };
-      return response;
     } catch (error) {
       return rejectWithValue("Failed to fetch user growth data");
     }
