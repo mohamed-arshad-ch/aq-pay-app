@@ -256,7 +256,7 @@ const walletSlice = createSlice({
       })
       .addCase(sendFromWallet.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Only add to pendingTransactions since it's a pending transaction
+        // Only add to pendingTransactions, not to main transactions array
         state.pendingTransactions.unshift(action.payload.transaction);
       })
       .addCase(sendFromWallet.rejected, (state, action) => {

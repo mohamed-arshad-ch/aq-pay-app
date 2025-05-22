@@ -41,7 +41,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormValues>({
-    resolver: zodResolver<LoginFormValues>(loginSchema),
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
@@ -52,6 +52,33 @@ export function LoginForm() {
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
     try {
+      // Check for admin credentials
+      if (data.username === "admin@gmail.com" && data.password === "Admin123") {
+        // Dispatch admin login action
+        dispatch(
+          login({
+            user: {
+              id: "admin",
+              username: "admin@gmail.com",
+              role: "ADMIN",
+              name: "Admin User",
+            },
+            token: "admin-token",
+            rememberMe: data.rememberMe,
+          })
+        );
+
+        toast({
+          title: "Admin Login successful",
+          description: "Welcome to the admin dashboard!",
+        });
+
+        // Redirect to admin dashboard
+        router.push("/admin/dashboard");
+        return;
+      }
+
+      // Regular user login
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -61,12 +88,12 @@ export function LoginForm() {
       });
 
       const result = await response.json();
-      console.log('result', result)
+
       if (!response.ok) {
         throw new Error(result.error || "Login failed");
       }
 
-      // Dispatch login action
+      // Dispatch user login action
       dispatch(
         login({
           user: result.user,
@@ -80,7 +107,7 @@ export function LoginForm() {
         description: "Welcome back to MoneyManager!",
       });
 
-      // Redirect to dashboard
+      // Redirect to user dashboard
       router.push("/dashboard");
     } catch (error) {
       toast({

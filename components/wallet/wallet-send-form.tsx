@@ -9,6 +9,7 @@ import {
   sendFromWallet,
   addPendingTransaction,
 } from "@/store/slices/walletSlice";
+import { fetchAccounts } from "@/store/slices/accountsSlice";
 import type {
   WalletTransaction,
   WalletTransactionType,
@@ -42,7 +43,9 @@ export function WalletSendForm() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { wallet, isLoading } = useAppSelector((state) => state.wallet);
-  const { accounts } = useAppSelector((state) => state.accounts);
+  const { accounts, isLoading: accountsLoading } = useAppSelector(
+    (state) => state.accounts
+  );
 
   const [amount, setAmount] = useState("");
   const [bankAccountId, setBankAccountId] = useState("");
@@ -54,6 +57,11 @@ export function WalletSendForm() {
 
   // Check if user has sufficient balance
   const hasSufficientBalance = wallet && Number(amount) <= wallet.balance;
+
+  useEffect(() => {
+    // Fetch accounts when component mounts
+    dispatch(fetchAccounts());
+  }, [dispatch]);
 
   useEffect(() => {
     // Set the first account as default if available
@@ -213,12 +221,26 @@ export function WalletSendForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="bankAccount">Bank Account</Label>
-                <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                <Select
+                  value={bankAccountId}
+                  onValueChange={setBankAccountId}
+                  disabled={accountsLoading}
+                >
                   <SelectTrigger id="bankAccount">
-                    <SelectValue placeholder="Select a bank account" />
+                    <SelectValue
+                      placeholder={
+                        accountsLoading
+                          ? "Loading accounts..."
+                          : "Select a bank account"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.length === 0 ? (
+                    {accountsLoading ? (
+                      <SelectItem value="loading" disabled>
+                        Loading accounts...
+                      </SelectItem>
+                    ) : accounts.length === 0 ? (
                       <SelectItem value="no-accounts" disabled>
                         No bank accounts available
                       </SelectItem>
@@ -235,7 +257,7 @@ export function WalletSendForm() {
                 {errors.bankAccountId && (
                   <p className="text-sm text-red-500">{errors.bankAccountId}</p>
                 )}
-                {accounts.length === 0 && (
+                {!accountsLoading && accounts.length === 0 && (
                   <div className="flex items-start mt-2 text-sm text-amber-600">
                     <AlertCircle className="h-4 w-4 mr-1 mt-0.5" />
                     <span>
@@ -266,7 +288,10 @@ export function WalletSendForm() {
                 type="submit"
                 className="w-full"
                 disabled={
-                  isLoading || !hasSufficientBalance || accounts.length === 0
+                  isLoading ||
+                  accountsLoading ||
+                  !hasSufficientBalance ||
+                  accounts.length === 0
                 }
               >
                 {isLoading ? "Processing..." : "Send Money"}

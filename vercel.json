@@ -1,0 +1,4 @@
+{
+    "includeFiles": ["prisma/schema.prisma"]
+  }
+  
