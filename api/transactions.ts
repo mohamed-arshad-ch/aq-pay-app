@@ -28,101 +28,80 @@ const getAccountDetails = async (accountId: string) => {
 
 export const transactionsApi = {
   getTransactions: async (): Promise<Transaction[]> => {
-    await delay(1000);
-    return [];
+    const response = await fetch("/api/transactions");
+    if (!response.ok) {
+      throw new Error("Failed to fetch transactions");
+    }
+    return response.json();
   },
 
   getTransaction: async (id: string): Promise<Transaction> => {
-    await delay(800);
-    throw new Error("Transaction not found");
+    const response = await fetch(`/api/transactions/${id}`);
+    if (!response.ok) {
+      throw new Error("Transaction not found");
+    }
+    return response.json();
   },
 
   createTransaction: async (
     transactionData: Partial<Transaction>
   ): Promise<Transaction> => {
-    await delay(1500);
-
-    // Generate a transaction ID
-    const transactionId = `TX${Date.now().toString().slice(-9)}`;
-
-    // Get account details
-    let fromAccountDetails = null;
-    let toAccountDetails = null;
-
-    if (
-      transactionData.fromAccountId &&
-      transactionData.fromAccountId !== "external"
-    ) {
-      fromAccountDetails = await getAccountDetails(
-        transactionData.fromAccountId
-      );
+    const response = await fetch("/api/transactions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(transactionData),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to create transaction");
     }
-
-    if (
-      transactionData.toAccountId &&
-      transactionData.toAccountId !== "external"
-    ) {
-      toAccountDetails = await getAccountDetails(transactionData.toAccountId);
-    }
-
-    // Determine transaction type
-    let type = TransactionType.PAYMENT;
-    if (transactionData.fromAccountId === "external") {
-      type = TransactionType.DEPOSIT;
-    } else if (transactionData.category === TransactionCategory.WITHDRAWAL) {
-      type = TransactionType.WITHDRAWAL;
-    } else if (transactionData.category === TransactionCategory.TRANSFER) {
-      type = TransactionType.TRANSFER;
-    }
-
-    // Create new transaction
-    const newTransaction: Transaction = {
-      id: transactionId,
-      userId: transactionData.userId || "1",
-      fromAccountId: transactionData.fromAccountId || "",
-      fromAccountName:
-        fromAccountDetails?.name || transactionData.fromAccountName || "",
-      fromAccountNumber:
-        fromAccountDetails?.number || transactionData.fromAccountNumber || "",
-      toAccountId: transactionData.toAccountId || "",
-      toAccountName:
-        toAccountDetails?.name || transactionData.toAccountName || "",
-      toAccountNumber:
-        toAccountDetails?.number || transactionData.toAccountNumber || "",
-      amount: transactionData.amount || 0,
-      currency: "USD",
-      description: transactionData.description || "",
-      category: transactionData.category || TransactionCategory.PAYMENT,
-      status: TransactionStatus.PENDING,
-      type,
-      date: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    return newTransaction;
+    return response.json();
   },
 
   approveTransaction: async (id: string): Promise<Transaction> => {
-    await delay(1000);
-    throw new Error("Transaction not found");
+    const response = await fetch(`/api/transactions/${id}/approve`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      throw new Error("Failed to approve transaction");
+    }
+    return response.json();
   },
 
   rejectTransaction: async (
     id: string,
     reason: string
   ): Promise<Transaction> => {
-    await delay(1000);
-    throw new Error("Transaction not found");
+    const response = await fetch(`/api/transactions/${id}/reject`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ reason }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to reject transaction");
+    }
+    return response.json();
   },
 
   cancelTransaction: async (id: string): Promise<Transaction> => {
-    await delay(1000);
-    throw new Error("Transaction not found");
+    const response = await fetch(`/api/transactions/${id}/cancel`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      throw new Error("Failed to cancel transaction");
+    }
+    return response.json();
   },
 
   getTransactionHistory: async (filters?: any): Promise<Transaction[]> => {
-    await delay(1000);
-    return [];
+    const queryParams = new URLSearchParams(filters).toString();
+    const response = await fetch(`/api/transactions/history?${queryParams}`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch transaction history");
+    }
+    return response.json();
   },
 };

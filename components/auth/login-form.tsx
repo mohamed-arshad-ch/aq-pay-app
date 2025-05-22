@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
 import type { User } from "@/types";
+import { UserStatus } from "@/types";
 
 const loginSchema = z.object({
   username: z.string().min(3, {
@@ -30,7 +31,7 @@ const loginSchema = z.object({
   password: z.string().min(8, {
     message: "Password must be at least 8 characters.",
   }),
-  rememberMe: z.boolean().default(false),
+  rememberMe: z.boolean(),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -63,19 +64,14 @@ export function LoginForm() {
           firstName: "Admin",
           lastName: "User",
           role: "ADMIN",
-          password: "", // Not needed for client-side
+          password: "",
           phoneNumber: "",
-          address: "",
-          city: "",
-          state: "",
-          country: "",
-          postalCode: "",
+          emailVerified: true,
+          verifyToken: null,
+          verifyTokenExpires: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-          isActive: true,
-          isVerified: true,
-          lastLogin: new Date(),
-          emailVerified: true,
+          lastLogin: new Date().toISOString(),
           twoFactorEnabled: false,
           notificationPreferences: {
             transactions: true,
@@ -90,7 +86,7 @@ export function LoginForm() {
           },
           verificationStatus: "verified",
           verificationDocuments: [],
-          status: "ACTIVE",
+          status: UserStatus.ACTIVE,
         };
 
         // Dispatch admin login action

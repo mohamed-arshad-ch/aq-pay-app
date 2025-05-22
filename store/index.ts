@@ -2,6 +2,10 @@ import { configureStore } from "@reduxjs/toolkit";
 import reportsReducer from "./slices/reportsSlice";
 import activitiesReducer from "./slices/activitiesSlice";
 import usersReducer, { UsersState } from "./slices/usersSlice";
+import authReducer from "./slices/authSlice";
+import walletReducer, { WalletState } from "./slices/walletSlice";
+import settingsReducer from "./slices/settingsSlice";
+import transactionsReducer from "./slices/transactionsSlice";
 
 export interface RootState {
   reports: any;
@@ -12,7 +16,8 @@ export interface RootState {
   accounts: any;
   transactions: any;
   dashboard: any;
-  wallet: any;
+  wallet: WalletState;
+  settings: any;
 }
 
 const store = configureStore({
@@ -20,12 +25,13 @@ const store = configureStore({
     reports: reportsReducer,
     activities: activitiesReducer,
     users: usersReducer,
-    auth: (state = {}) => state,
+    auth: authReducer,
     ui: (state = {}) => state,
     accounts: (state = {}) => state,
-    transactions: (state = {}) => state,
+    transactions: transactionsReducer,
     dashboard: (state = {}) => state,
-    wallet: (state = {}) => state,
+    wallet: walletReducer,
+    settings: settingsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

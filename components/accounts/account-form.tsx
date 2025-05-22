@@ -1,21 +1,41 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { addAccount, updateAccount, fetchAccount, setDefaultAccount, deleteAccount } from "@/store/slices/accountsSlice"
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "@/components/ui/use-toast"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AccountType } from "@/types"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  addAccount,
+  updateAccount,
+  fetchAccount,
+  setDefaultAccount,
+  deleteAccount,
+} from "@/store/slices/accountsSlice";
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AccountType } from "@/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +45,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 // List of banks for the dropdown
 const BANKS = [
@@ -39,7 +59,7 @@ const BANKS = [
   "PNC Bank",
   "HSBC",
   "Other",
-]
+];
 
 const accountFormSchema = z.object({
   accountName: z.string().min(2, {
@@ -84,21 +104,23 @@ const accountFormSchema = z.object({
   accountType: z.nativeEnum(AccountType, {
     errorMap: () => ({ message: "Please select an account type." }),
   }),
-  isDefault: z.boolean().default(false),
-})
+  isDefault: z.boolean(),
+});
 
-type AccountFormValues = z.infer<typeof accountFormSchema>
+type AccountFormValues = z.infer<typeof accountFormSchema>;
 
 interface AccountFormProps {
-  id?: string
+  id?: string;
 }
 
 export function AccountForm({ id }: AccountFormProps) {
-  const router = useRouter()
-  const dispatch = useAppDispatch()
-  const { selectedAccount, isLoading, error } = useAppSelector((state) => state.accounts)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const isEditMode = !!id
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { selectedAccount, isLoading, error } = useAppSelector(
+    (state) => state.accounts
+  );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const isEditMode = !!id;
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
@@ -113,13 +135,13 @@ export function AccountForm({ id }: AccountFormProps) {
       accountType: AccountType.CHECKING,
       isDefault: false,
     },
-  })
+  });
 
   useEffect(() => {
     if (isEditMode) {
-      dispatch(fetchAccount(id))
+      dispatch(fetchAccount(id));
     }
-  }, [dispatch, id, isEditMode])
+  }, [dispatch, id, isEditMode]);
 
   useEffect(() => {
     if (isEditMode && selectedAccount) {
@@ -133,9 +155,9 @@ export function AccountForm({ id }: AccountFormProps) {
         branchName: selectedAccount.branchName || "",
         accountType: selectedAccount.accountType,
         isDefault: selectedAccount.isDefault,
-      })
+      });
     }
-  }, [form, isEditMode, selectedAccount])
+  }, [form, isEditMode, selectedAccount]);
 
   useEffect(() => {
     if (error) {
@@ -143,9 +165,9 @@ export function AccountForm({ id }: AccountFormProps) {
         variant: "destructive",
         title: "Error",
         description: error,
-      })
+      });
     }
-  }, [error])
+  }, [error]);
 
   const onSubmit = async (data: AccountFormValues) => {
     try {
@@ -157,58 +179,58 @@ export function AccountForm({ id }: AccountFormProps) {
               ...data,
               userId: selectedAccount.userId,
             },
-          }),
-        ).unwrap()
+          })
+        ).unwrap();
 
         if (data.isDefault && !selectedAccount.isDefault) {
-          await dispatch(setDefaultAccount(selectedAccount.id)).unwrap()
+          await dispatch(setDefaultAccount(selectedAccount.id)).unwrap();
         }
 
         toast({
           title: "Account updated",
           description: "Your account has been successfully updated.",
-        })
+        });
       } else {
         await dispatch(
           addAccount({
             ...data,
             userId: "1", // In a real app, this would come from the authenticated user
-          }),
-        ).unwrap()
+          })
+        ).unwrap();
 
         toast({
           title: "Account added",
           description: "Your account has been successfully added.",
-        })
+        });
       }
 
-      router.push("/dashboard/accounts")
+      router.push("/dashboard/accounts");
     } catch (error) {
       // Error is already handled in the error useEffect
     }
-  }
+  };
 
   const handleDelete = async () => {
     if (isEditMode && selectedAccount) {
       try {
-        await dispatch(deleteAccount(selectedAccount.id)).unwrap()
+        await dispatch(deleteAccount(selectedAccount.id)).unwrap();
         toast({
           title: "Account deleted",
           description: "Your account has been successfully deleted.",
-        })
-        router.push("/dashboard/accounts")
+        });
+        router.push("/dashboard/accounts");
       } catch (error) {
         // Error is already handled in the error useEffect
       }
     }
-    setDeleteDialogOpen(false)
-  }
+    setDeleteDialogOpen(false);
+  };
 
   const formatRoutingNumber = (value: string) => {
     // Remove non-digits
-    const digits = value.replace(/\D/g, "")
-    return digits
-  }
+    const digits = value.replace(/\D/g, "");
+    return digits;
+  };
 
   return (
     <div className="container px-4 py-6 pb-20">
@@ -216,7 +238,9 @@ export function AccountForm({ id }: AccountFormProps) {
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-bold">{isEditMode ? "Edit Account" : "Add Account"}</h1>
+        <h1 className="text-xl font-bold">
+          {isEditMode ? "Edit Account" : "Add Account"}
+        </h1>
       </div>
 
       <Form {...form}>
@@ -230,7 +254,10 @@ export function AccountForm({ id }: AccountFormProps) {
                 <FormControl>
                   <Input placeholder="e.g., Primary Checking" {...field} />
                 </FormControl>
-                <FormDescription>This is how the account will be displayed in your account list.</FormDescription>
+                <FormDescription>
+                  This is how the account will be displayed in your account
+                  list.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -245,7 +272,9 @@ export function AccountForm({ id }: AccountFormProps) {
                 <FormControl>
                   <Input placeholder="e.g., John Doe" {...field} />
                 </FormControl>
-                <FormDescription>The name of the person who owns this account.</FormDescription>
+                <FormDescription>
+                  The name of the person who owns this account.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -263,13 +292,14 @@ export function AccountForm({ id }: AccountFormProps) {
                     {...field}
                     onChange={(e) => {
                       // Allow only digits
-                      const value = e.target.value.replace(/\D/g, "")
-                      field.onChange(value)
+                      const value = e.target.value.replace(/\D/g, "");
+                      field.onChange(value);
                     }}
                   />
                 </FormControl>
                 <FormDescription>
-                  Your account number is kept secure and only the last 4 digits will be displayed.
+                  Your account number is kept secure and only the last 4 digits
+                  will be displayed.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -287,13 +317,17 @@ export function AccountForm({ id }: AccountFormProps) {
                     placeholder="Enter 9-digit routing number"
                     {...field}
                     onChange={(e) => {
-                      const formattedValue = formatRoutingNumber(e.target.value)
-                      field.onChange(formattedValue)
+                      const formattedValue = formatRoutingNumber(
+                        e.target.value
+                      );
+                      field.onChange(formattedValue);
                     }}
                     maxLength={9}
                   />
                 </FormControl>
-                <FormDescription>The 9-digit number that identifies your bank.</FormDescription>
+                <FormDescription>
+                  The 9-digit number that identifies your bank.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -311,13 +345,16 @@ export function AccountForm({ id }: AccountFormProps) {
                     {...field}
                     onChange={(e) => {
                       // Convert to uppercase
-                      const value = e.target.value.toUpperCase()
-                      field.onChange(value)
+                      const value = e.target.value.toUpperCase();
+                      field.onChange(value);
                     }}
                     maxLength={11}
                   />
                 </FormControl>
-                <FormDescription>The 11-character IFSC code that identifies your bank branch in India.</FormDescription>
+                <FormDescription>
+                  The 11-character IFSC code that identifies your bank branch in
+                  India.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -329,7 +366,10 @@ export function AccountForm({ id }: AccountFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Bank Name</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a bank" />
@@ -368,17 +408,24 @@ export function AccountForm({ id }: AccountFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Account Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select account type" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={AccountType.CHECKING}>Checking</SelectItem>
+                    <SelectItem value={AccountType.CHECKING}>
+                      Checking
+                    </SelectItem>
                     <SelectItem value={AccountType.SAVINGS}>Savings</SelectItem>
                     <SelectItem value={AccountType.CREDIT}>Credit</SelectItem>
-                    <SelectItem value={AccountType.INVESTMENT}>Investment</SelectItem>
+                    <SelectItem value={AccountType.INVESTMENT}>
+                      Investment
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -444,17 +491,21 @@ export function AccountForm({ id }: AccountFormProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your account and remove it from our servers.
+              This action cannot be undone. This will permanently delete your
+              account and remove it from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

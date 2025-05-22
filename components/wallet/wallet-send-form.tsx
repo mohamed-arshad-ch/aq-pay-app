@@ -9,11 +9,11 @@ import {
   sendFromWallet,
   addPendingTransaction,
 } from "@/store/slices/walletSlice";
-import { fetchAccounts } from "@/store/slices/accountsSlice";
 import type {
   WalletTransaction,
   WalletTransactionType,
   WalletTransactionStatus,
+  BankAccount,
 } from "@/types";
 import { formatCurrency } from "@/lib/currency-utils";
 import {
@@ -39,13 +39,22 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from "uuid";
 
+// Local storage key
+const ACCOUNTS_STORAGE_KEY = "money_manager_accounts";
+
+// Helper function to get accounts from local storage
+const getStoredAccounts = (): BankAccount[] => {
+  if (typeof window === "undefined") return [];
+  const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+  return stored ? JSON.parse(stored) : [];
+};
+
 export function WalletSendForm() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { wallet, isLoading } = useAppSelector((state) => state.wallet);
-  const { accounts, isLoading: accountsLoading } = useAppSelector(
-    (state) => state.accounts
-  );
+  const [accounts, setAccounts] = useState<BankAccount[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
 
   const [amount, setAmount] = useState("");
   const [bankAccountId, setBankAccountId] = useState("");
@@ -59,16 +68,16 @@ export function WalletSendForm() {
   const hasSufficientBalance = wallet && Number(amount) <= wallet.balance;
 
   useEffect(() => {
-    // Fetch accounts when component mounts
-    dispatch(fetchAccounts());
-  }, [dispatch]);
+    // Load accounts from local storage when component mounts
+    const storedAccounts = getStoredAccounts();
+    setAccounts(storedAccounts);
+    setIsLoadingAccounts(false);
 
-  useEffect(() => {
     // Set the first account as default if available
-    if (accounts.length > 0 && !bankAccountId) {
-      setBankAccountId(accounts[0].id);
+    if (storedAccounts.length > 0 && !bankAccountId) {
+      setBankAccountId(storedAccounts[0].id);
     }
-  }, [accounts, bankAccountId]);
+  }, [bankAccountId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,19 +233,19 @@ export function WalletSendForm() {
                 <Select
                   value={bankAccountId}
                   onValueChange={setBankAccountId}
-                  disabled={accountsLoading}
+                  disabled={isLoadingAccounts}
                 >
                   <SelectTrigger id="bankAccount">
                     <SelectValue
                       placeholder={
-                        accountsLoading
+                        isLoadingAccounts
                           ? "Loading accounts..."
                           : "Select a bank account"
                       }
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {accountsLoading ? (
+                    {isLoadingAccounts ? (
                       <SelectItem value="loading" disabled>
                         Loading accounts...
                       </SelectItem>
@@ -257,7 +266,7 @@ export function WalletSendForm() {
                 {errors.bankAccountId && (
                   <p className="text-sm text-red-500">{errors.bankAccountId}</p>
                 )}
-                {!accountsLoading && accounts.length === 0 && (
+                {!isLoadingAccounts && accounts.length === 0 && (
                   <div className="flex items-start mt-2 text-sm text-amber-600">
                     <AlertCircle className="h-4 w-4 mr-1 mt-0.5" />
                     <span>
@@ -289,7 +298,7 @@ export function WalletSendForm() {
                 className="w-full"
                 disabled={
                   isLoading ||
-                  accountsLoading ||
+                  isLoadingAccounts ||
                   !hasSufficientBalance ||
                   accounts.length === 0
                 }

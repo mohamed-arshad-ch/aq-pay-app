@@ -29,12 +29,12 @@ export default function TransactionsPage() {
     dispatch(fetchTransactions());
   }, [dispatch]);
 
-  const pendingTransactions = filteredTransactions.filter(
-    (transaction) => transaction.status === "PENDING"
+  const pendingTransactions = (filteredTransactions || []).filter(
+    (transaction: Transaction) => transaction.status === "PENDING"
   );
 
-  const rejectedTransactions = filteredTransactions.filter(
-    (transaction) => transaction.status === "REJECTED"
+  const rejectedTransactions = (filteredTransactions || []).filter(
+    (transaction: Transaction) => transaction.status === "REJECTED"
   );
 
   const handleViewTransaction = (transaction: Transaction) => {
@@ -87,7 +87,7 @@ export default function TransactionsPage() {
           <CardTitle>Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          {transactions.length === 0? (
+          {!transactions || transactions.length === 0 ? (
             <div className="flex h-[400px] flex-col items-center justify-center text-center">
               <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
               <h3 className="mb-2 text-lg font-medium">
@@ -97,10 +97,6 @@ export default function TransactionsPage() {
                 There are no transactions in the system yet. Transactions will
                 appear here once they are created.
               </p>
-              {/* <Button onClick={handleRefresh} variant="outline">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh
-              </Button> */}
             </div>
           ) : (
             <Tabs defaultValue="all" className="w-full">
@@ -108,7 +104,7 @@ export default function TransactionsPage() {
                 <TabsTrigger value="all">
                   All Transactions
                   <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs">
-                    {filteredTransactions.length}
+                    {(filteredTransactions || []).length}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger value="pending">
@@ -126,7 +122,7 @@ export default function TransactionsPage() {
               </TabsList>
               <TabsContent value="all">
                 <TransactionTable
-                  transactions={filteredTransactions}
+                  transactions={filteredTransactions || []}
                   isLoading={isLoading}
                   onViewTransaction={handleViewTransaction}
                 />
