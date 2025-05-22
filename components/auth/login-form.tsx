@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
+import type { User } from "@/types";
 
 const loginSchema = z.object({
   username: z.string().min(3, {
@@ -54,15 +55,48 @@ export function LoginForm() {
     try {
       // Check for admin credentials
       if (data.username === "admin@gmail.com" && data.password === "Admin123") {
+        // Create admin user object
+        const adminUser: User = {
+          id: "admin",
+          username: "admin@gmail.com",
+          email: "admin@gmail.com",
+          firstName: "Admin",
+          lastName: "User",
+          role: "ADMIN",
+          password: "", // Not needed for client-side
+          phoneNumber: "",
+          address: "",
+          city: "",
+          state: "",
+          country: "",
+          postalCode: "",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isActive: true,
+          isVerified: true,
+          lastLogin: new Date(),
+          emailVerified: true,
+          twoFactorEnabled: false,
+          notificationPreferences: {
+            transactions: true,
+            balanceUpdates: true,
+            securityAlerts: true,
+            marketing: false,
+          },
+          appPreferences: {
+            language: "en",
+            theme: "light",
+            defaultCurrency: "USD",
+          },
+          verificationStatus: "verified",
+          verificationDocuments: [],
+          status: "ACTIVE",
+        };
+
         // Dispatch admin login action
         dispatch(
           login({
-            user: {
-              id: "admin",
-              username: "admin@gmail.com",
-              role: "ADMIN",
-              name: "Admin User",
-            },
+            user: adminUser,
             token: "admin-token",
             rememberMe: data.rememberMe,
           })
