@@ -3,15 +3,24 @@ import {
   createAsyncThunk,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import { adminApi } from "@/api/admin";
 
 export interface User {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
+  phoneNumber: string | null;
+  createdAt: Date;
+  lastLogin: Date;
+  twoFactorEnabled: boolean;
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   role: string;
-  status: "Active" | "Pending" | "Inactive";
-  joinDate: string;
+  linkedAccounts: number;
+  transactionCount: number;
+  transactionVolume: number;
+  riskLevel: string;
+  kycStatus: string;
+  notes?: string;
 }
 
 export interface UsersState {
@@ -30,12 +39,14 @@ export const fetchUsers = createAsyncThunk(
   "users/fetchUsers",
   async (_, { rejectWithValue }) => {
     try {
-      // In a real app, we would call an actual endpoint
-      // const response = await adminApi.getUsers()
-
-      // Return empty data structure
-      return [];
+      const response = await fetch("/api/admin/users");
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      const data = await response.json();
+      return data;
     } catch (error) {
+      console.error("Error fetching users:", error);
       return rejectWithValue("Failed to fetch users");
     }
   }

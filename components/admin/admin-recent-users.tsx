@@ -1,5 +1,5 @@
 "use client";
-import { MoreHorizontal, Shield } from "lucide-react";
+import { MoreHorizontal, Shield, User as UserIcon } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -30,7 +30,7 @@ import { useAppSelector } from "@/store/hooks";
 import { useEffect } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { fetchUsers, type User as UserType } from "@/store/slices/usersSlice";
-import { User as UserIcon } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
 export function AdminRecentUsers({
   isLoading = false,
@@ -38,11 +38,13 @@ export function AdminRecentUsers({
   isLoading?: boolean;
 }) {
   const dispatch = useAppDispatch();
-  const users = useAppSelector((state) => state.users?.data);
+  const { data: users, loading } = useAppSelector((state) => state.users);
 
   useEffect(() => {
     dispatch(fetchUsers());
   }, [dispatch]);
+
+  const displayLoading = isLoading || loading;
 
   return (
     <Card>
@@ -53,7 +55,7 @@ export function AdminRecentUsers({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {displayLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <div
@@ -80,7 +82,9 @@ export function AdminRecentUsers({
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Join Date</TableHead>
+                  <TableHead>Registration Date</TableHead>
+                  <TableHead>Last Login</TableHead>
+                  <TableHead>Accounts</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -93,7 +97,9 @@ export function AdminRecentUsers({
                           <UserIcon className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
-                          <div className="font-medium">{user.name}</div>
+                          <div className="font-medium">
+                            {user.firstName} {user.lastName}
+                          </div>
                           <div className="text-sm text-muted-foreground">
                             {user.email}
                           </div>
@@ -110,19 +116,19 @@ export function AdminRecentUsers({
                       <Badge
                         variant="outline"
                         className={
-                          user.status === "Active"
+                          user.status === "ACTIVE"
                             ? "bg-green-50 text-green-700 border-green-200"
-                            : user.status === "Pending"
-                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                            : "bg-gray-50 text-gray-700 border-gray-200"
+                            : user.status === "INACTIVE"
+                            ? "bg-gray-50 text-gray-700 border-gray-200"
+                            : "bg-red-50 text-red-700 border-red-200"
                         }
                       >
                         {user.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {new Date(user.joinDate).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell>{formatDate(user.createdAt)}</TableCell>
+                    <TableCell>{formatDate(user.lastLogin)}</TableCell>
+                    <TableCell>{user.linkedAccounts}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -139,7 +145,7 @@ export function AdminRecentUsers({
                           <DropdownMenuItem>Reset Password</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600">
-                            {user.status === "Active"
+                            {user.status === "ACTIVE"
                               ? "Deactivate User"
                               : "Activate User"}
                           </DropdownMenuItem>
