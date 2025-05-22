@@ -9,7 +9,6 @@ const publicPaths = [
   "/auth/reset-password",
   "/api/auth/login",
   "/api/auth/register",
-  "/admin/dashboard",
 ];
 
 export async function middleware(request: NextRequest) {
