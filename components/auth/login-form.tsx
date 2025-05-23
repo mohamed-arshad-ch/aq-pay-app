@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
 import type { User } from "@/types";
 import { UserStatus } from "@/types";
+import { generateToken } from "@/lib/jwt";
 
 const loginSchema = z.object({
   username: z.string().min(3, {
@@ -56,46 +57,29 @@ export function LoginForm() {
     try {
       // Check for admin credentials
       if (data.username === "admin" && data.password === "Admin123") {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log("Admin login attempt detected");
 
-        // Create admin user object
-        const adminUser: User = {
-          id: "admin",
-          username: "admin",
-          email: "admin@gmail.com",
-          firstName: "Admin",
-          lastName: "User",
-          role: "ADMIN",
-          password: "",
-          phoneNumber: "",
-          emailVerified: true,
-          verifyToken: null,
-          verifyTokenExpires: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          twoFactorEnabled: false,
-          notificationPreferences: {
-            transactions: true,
-            balanceUpdates: true,
-            securityAlerts: true,
-            marketing: false,
+        // Call admin login API
+        const response = await fetch("/api/auth/admin-login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          appPreferences: {
-            language: "en",
-            theme: "light",
-            defaultCurrency: "USD",
-          },
-          verificationStatus: "verified",
-          verificationDocuments: [],
-          status: UserStatus.ACTIVE,
-        };
+          body: JSON.stringify(data),
+        });
 
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Admin login failed");
+        }
+
+        console.log("Dispatching admin login action");
         // Dispatch admin login action
         dispatch(
           login({
-            user: adminUser,
-            token: "admin-token",
+            user: result.user,
+            token: result.token,
             rememberMe: data.rememberMe,
           })
         );
@@ -104,8 +88,10 @@ export function LoginForm() {
           title: "Admin Login successful",
           description: "Welcome to the admin dashboard!",
         });
+        console.log("Admin login successful, showing toast");
 
         // Redirect to admin dashboard
+        console.log("Redirecting to admin dashboard");
         router.push("/admin/dashboard");
         return;
       }

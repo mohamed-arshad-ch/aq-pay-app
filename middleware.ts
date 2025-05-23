@@ -22,41 +22,54 @@ export async function middleware(request: NextRequest) {
   // Get token from cookie
   const token = request.cookies.get("auth_token")?.value;
 
-  if (!token) {
-    // Redirect to login if no token
-    return NextResponse.redirect(new URL("/auth/login", request.url));
+  // Check if the request is for admin routes
+  if (pathname.startsWith("/admin")) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+
+    try {
+      const payload = await verifyToken(token);
+
+      if (!payload) {
+        return NextResponse.redirect(new URL("/auth/login", request.url));
+      }
+
+      // Check if user has admin role
+      if (payload.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+
+      return NextResponse.next();
+    } catch (error) {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
   }
 
-  // Verify token
-  const payload = await verifyToken(token);
-  if (!payload) {
-    // Redirect to login if token is invalid
-    return NextResponse.redirect(new URL("/auth/login", request.url));
+  // For other protected routes
+  if (pathname.startsWith("/dashboard")) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+
+    try {
+      const payload = await verifyToken(token);
+      if (!payload) {
+        return NextResponse.redirect(new URL("/auth/login", request.url));
+      }
+      return NextResponse.next();
+    } catch (error) {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
   }
 
-  // Add user info to request headers
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-user-id", payload.id);
-  requestHeaders.set("x-user-email", payload.email);
-  requestHeaders.set("x-user-username", payload.username);
-
-  // Return response with modified headers
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
+    "/admin/:path*",
+    "/dashboard/:path*",
     "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };
