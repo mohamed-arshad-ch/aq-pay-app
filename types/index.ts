@@ -8,9 +8,9 @@ export interface User {
   password: string;
   emailVerified: boolean;
   verifyToken?: string | null;
-  verifyTokenExpires?: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  verifyTokenExpires?: string | null;
+  createdAt: string;
+  updatedAt: string;
   phoneNumber: string;
   profileImage?: string;
   address?: string;

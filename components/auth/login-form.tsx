@@ -55,7 +55,7 @@ export function LoginForm() {
     setIsLoading(true);
     try {
       // Check for admin credentials
-      if (data.username === "admin@gmail.com" && data.password === "Admin123") {
+      if (data.username === "admin" && data.password === "Admin123") {
         // Create admin user object
         const adminUser: User = {
           id: "admin",
@@ -69,8 +69,8 @@ export function LoginForm() {
           emailVerified: true,
           verifyToken: null,
           verifyTokenExpires: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           lastLogin: new Date().toISOString(),
           twoFactorEnabled: false,
           notificationPreferences: {
