@@ -1,24 +1,39 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { updatePreferences } from "@/store/slices/profileSlice"
-import { setCurrency } from "@/store/slices/settingsSlice"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2 } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
-import { useTheme } from "next-themes"
+import { useState } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { updatePreferences } from "@/store/slices/profileSlice";
+import { setCurrency } from "@/store/slices/settingsSlice";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { useTheme } from "next-themes";
 
 export function Preferences() {
-  const dispatch = useAppDispatch()
-  const { isUpdating } = useAppSelector((state) => state.profile)
-  const { accounts } = useAppSelector((state) => state.accounts)
-  const { theme, setTheme } = useTheme()
-  const [isLoading, setIsLoading] = useState(false)
+  const dispatch = useAppDispatch();
+  const profileState = useAppSelector((state) => state.profile);
+  const accountsState = useAppSelector((state) => state.accounts);
+  const { isUpdating } = profileState || { isUpdating: false };
+  const { accounts = [] } = accountsState || { accounts: [] };
+  const { theme, setTheme } = useTheme();
+  const [isLoading, setIsLoading] = useState(false);
 
   const [preferences, setPreferences] = useState({
     notifications: {
@@ -33,62 +48,64 @@ export function Preferences() {
       currency: "USD",
       defaultAccountId: accounts.length > 0 ? accounts[0].id : "",
     },
-  })
+  });
 
-  const handleNotificationToggle = (key: keyof typeof preferences.notifications) => (checked: boolean) => {
-    // Security alerts cannot be disabled
-    if (key === "securityAlerts" && !checked) {
-      toast({
-        title: "Security alerts cannot be disabled",
-        description: "Security alerts are required for your account safety.",
-      })
-      return
-    }
+  const handleNotificationToggle =
+    (key: keyof typeof preferences.notifications) => (checked: boolean) => {
+      // Security alerts cannot be disabled
+      if (key === "securityAlerts" && !checked) {
+        toast({
+          title: "Security alerts cannot be disabled",
+          description: "Security alerts are required for your account safety.",
+        });
+        return;
+      }
 
-    setPreferences({
-      ...preferences,
-      notifications: {
-        ...preferences.notifications,
-        [key]: checked,
-      },
-    })
-  }
+      setPreferences({
+        ...preferences,
+        notifications: {
+          ...preferences.notifications,
+          [key]: checked,
+        },
+      });
+    };
 
-  const handleAppPreferenceChange = (key: keyof typeof preferences.app) => (value: string) => {
-    setPreferences({
-      ...preferences,
-      app: {
-        ...preferences.app,
-        [key]: value,
-      },
-    })
+  const handleAppPreferenceChange =
+    (key: keyof typeof preferences.app) => (value: string) => {
+      setPreferences({
+        ...preferences,
+        app: {
+          ...preferences.app,
+          [key]: value,
+        },
+      });
 
-    // Update theme immediately
-    if (key === "theme") {
-      setTheme(value)
-    }
-  }
+      // Update theme immediately
+      if (key === "theme") {
+        setTheme(value);
+      }
+    };
 
   async function handleSave() {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await dispatch(updatePreferences(preferences)).unwrap()
+      await dispatch(updatePreferences(preferences)).unwrap();
 
       // Update currency throughout the application
-      dispatch(setCurrency(preferences.app.currency))
+      dispatch(setCurrency(preferences.app.currency));
 
       toast({
         title: "Preferences updated",
         description: "Your preferences have been updated successfully.",
-      })
+      });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to update preferences. Please try again.",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -102,7 +119,7 @@ export function Preferences() {
     { value: "ja", label: "Japanese" },
     { value: "ar", label: "Arabic" },
     { value: "hi", label: "Hindi" },
-  ]
+  ];
 
   // Available currencies
   const currencies = [
@@ -115,19 +132,24 @@ export function Preferences() {
     { value: "INR", label: "Indian Rupee (₹)" },
     { value: "CNY", label: "Chinese Yuan (¥)" },
     { value: "SAR", label: "Saudi Riyal (﷼)" },
-  ]
+  ];
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Notification Preferences</CardTitle>
-          <CardDescription>Manage how and when you receive notifications.</CardDescription>
+          <CardDescription>
+            Manage how and when you receive notifications.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="transaction-alerts" className="flex flex-col space-y-1">
+              <Label
+                htmlFor="transaction-alerts"
+                className="flex flex-col space-y-1"
+              >
                 <span>Transaction Alerts</span>
                 <span className="text-xs text-muted-foreground">
                   Receive notifications for deposits, withdrawals, and transfers
@@ -141,7 +163,10 @@ export function Preferences() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="balance-updates" className="flex flex-col space-y-1">
+              <Label
+                htmlFor="balance-updates"
+                className="flex flex-col space-y-1"
+              >
                 <span>Balance Updates</span>
                 <span className="text-xs text-muted-foreground">
                   Receive notifications when your account balance changes
@@ -155,10 +180,14 @@ export function Preferences() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="security-alerts" className="flex flex-col space-y-1">
+              <Label
+                htmlFor="security-alerts"
+                className="flex flex-col space-y-1"
+              >
                 <span>Security Alerts</span>
                 <span className="text-xs text-muted-foreground">
-                  Receive notifications for login attempts and security changes (cannot be disabled)
+                  Receive notifications for login attempts and security changes
+                  (cannot be disabled)
                 </span>
               </Label>
               <Switch
@@ -169,14 +198,21 @@ export function Preferences() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="marketing-communications" className="flex flex-col space-y-1">
+              <Label
+                htmlFor="marketing-communications"
+                className="flex flex-col space-y-1"
+              >
                 <span>Marketing Communications</span>
-                <span className="text-xs text-muted-foreground">Receive promotional emails and special offers</span>
+                <span className="text-xs text-muted-foreground">
+                  Receive promotional emails and special offers
+                </span>
               </Label>
               <Switch
                 id="marketing-communications"
                 checked={preferences.notifications.marketingCommunications}
-                onCheckedChange={handleNotificationToggle("marketingCommunications")}
+                onCheckedChange={handleNotificationToggle(
+                  "marketingCommunications"
+                )}
                 disabled={isUpdating}
               />
             </div>
@@ -249,7 +285,7 @@ export function Preferences() {
             <div className="space-y-2">
               <Label htmlFor="default-account">Default Account</Label>
               <Select
-                value={preferences.app.defaultAccountId}
+                value={preferences.app.defaultAccountId || "none"}
                 onValueChange={handleAppPreferenceChange("defaultAccountId")}
                 disabled={isUpdating || accounts.length === 0}
               >
@@ -264,7 +300,7 @@ export function Preferences() {
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="" disabled>
+                    <SelectItem value="none" disabled>
                       No accounts available
                     </SelectItem>
                   )}
@@ -287,5 +323,5 @@ export function Preferences() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

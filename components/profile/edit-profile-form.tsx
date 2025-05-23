@@ -1,23 +1,47 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { fetchUserProfile, updateUserProfile } from "@/store/slices/profileSlice"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Loader2, Upload } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  fetchUserProfile,
+  updateUserProfile,
+} from "@/store/slices/profileSlice";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Loader2, Upload } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 const profileFormSchema = z.object({
   firstName: z.string().min(2, {
@@ -38,20 +62,27 @@ const profileFormSchema = z.object({
   zipCode: z.string().optional(),
   country: z.string().optional(),
   dateOfBirth: z.string().optional(),
-})
+});
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export function EditProfileForm() {
-  const router = useRouter()
-  const dispatch = useAppDispatch()
-  const { user, isLoading, isUpdating } = useAppSelector((state) => state.profile)
-  const [profileImage, setProfileImage] = useState<File | null>(null)
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const profileState = useAppSelector((state) => state.profile);
+  const { user, isLoading, isUpdating } = profileState || {
+    user: null,
+    isLoading: false,
+    isUpdating: false,
+  };
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
-    dispatch(fetchUserProfile())
-  }, [dispatch])
+    dispatch(fetchUserProfile());
+  }, [dispatch]);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -67,7 +98,7 @@ export function EditProfileForm() {
       country: "",
       dateOfBirth: "",
     },
-  })
+  });
 
   useEffect(() => {
     if (user) {
@@ -81,61 +112,65 @@ export function EditProfileForm() {
         state: user.state || "",
         zipCode: user.zipCode || "",
         country: user.country || "",
-        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split("T")[0] : "",
-      })
-      setProfileImagePreview(user.profileImage || null)
+        dateOfBirth: user.dateOfBirth
+          ? new Date(user.dateOfBirth).toISOString().split("T")[0]
+          : "",
+      });
+      setProfileImagePreview(user.profileImage || null);
     }
-  }, [user, form])
+  }, [user, form]);
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setProfileImage(file)
-      setProfileImagePreview(URL.createObjectURL(file))
+      const file = e.target.files[0];
+      setProfileImage(file);
+      setProfileImagePreview(URL.createObjectURL(file));
     }
-  }
+  };
 
   async function onSubmit(data: ProfileFormValues) {
     try {
       // Create a FormData object to handle file upload
-      const formData = new FormData()
+      const formData = new FormData();
 
       // Append all form fields
       Object.entries(data).forEach(([key, value]) => {
-        if (value) formData.append(key, value)
-      })
+        if (value) formData.append(key, value);
+      });
 
       // Append profile image if changed
       if (profileImage) {
-        formData.append("profileImage", profileImage)
+        formData.append("profileImage", profileImage);
       }
 
-      await dispatch(updateUserProfile(formData)).unwrap()
+      await dispatch(updateUserProfile(formData)).unwrap();
 
       toast({
         title: "Profile updated",
         description: "Your profile information has been updated successfully.",
-      })
+      });
 
-      router.push("/dashboard/profile")
+      router.push("/dashboard/profile");
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to update profile. Please try again.",
-      })
+      });
     }
   }
 
   if (isLoading) {
-    return <EditProfileFormSkeleton />
+    return <EditProfileFormSkeleton />;
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Edit Profile</CardTitle>
-        <CardDescription>Update your personal information and contact details.</CardDescription>
+        <CardDescription>
+          Update your personal information and contact details.
+        </CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -202,9 +237,15 @@ export function EditProfileForm() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="john.doe@example.com" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="john.doe@example.com"
+                        {...field}
+                      />
                     </FormControl>
-                    <FormDescription>Changing your email will require verification.</FormDescription>
+                    <FormDescription>
+                      Changing your email will require verification.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -218,7 +259,9 @@ export function EditProfileForm() {
                     <FormControl>
                       <Input placeholder="+1 (555) 123-4567" {...field} />
                     </FormControl>
-                    <FormDescription>Changing your phone will require verification.</FormDescription>
+                    <FormDescription>
+                      Changing your phone will require verification.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -301,7 +344,10 @@ export function EditProfileForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Country</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a country" />
@@ -324,7 +370,11 @@ export function EditProfileForm() {
             />
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button type="button" variant="outline" onClick={() => router.push("/dashboard/profile")}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push("/dashboard/profile")}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isUpdating}>
@@ -341,7 +391,7 @@ export function EditProfileForm() {
         </form>
       </Form>
     </Card>
-  )
+  );
 }
 
 function EditProfileFormSkeleton() {
@@ -405,5 +455,5 @@ function EditProfileFormSkeleton() {
         <Skeleton className="h-10 w-32" />
       </CardFooter>
     </Card>
-  )
+  );
 }

@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Edit, Lock, LogOut, Settings, Shield, Wallet } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { formatCurrency } from "@/lib/currency-utils";
+import { responseCookiesToRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
 interface UserProfile {
   id: string;
@@ -63,7 +64,7 @@ export function ProfileOverview() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch("/api/profile");
+        const response = await fetch("/api/user/profile");
         if (!response.ok) {
           throw new Error("Failed to fetch profile");
         }
@@ -116,7 +117,7 @@ export function ProfileOverview() {
   };
 
   const maskPhone = (phone: string) => {
-    if (!phone) return "";
+    if (!phone) return "nil";
     return `${phone.substring(0, 3)}${"*".repeat(
       phone.length - 7
     )}${phone.substring(phone.length - 4)}`;
@@ -124,7 +125,7 @@ export function ProfileOverview() {
 
   // Format date
   const formatDate = (dateString: string) => {
-    if (!dateString) return "";
+    if (!dateString) return "nil";
     const date = new Date(dateString);
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
@@ -133,9 +134,20 @@ export function ProfileOverview() {
     }).format(date);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
+      // Call logout API to clear the cookie
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to logout");
+      }
+
+      // Dispatch logout action to clear Redux state
       dispatch(logout());
+
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account.",
@@ -212,13 +224,13 @@ export function ProfileOverview() {
                   <p className="text-sm font-medium text-muted-foreground">
                     Phone
                   </p>
-                  <p>{maskPhone(user.phoneNumber)}</p>
+                  <p>{maskPhone(user.phoneNumber ?? "")}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
                     Last Login
                   </p>
-                  <p>{formatDate(user.lastLogin)}</p>
+                  <p>{formatDate(user.lastLogin ?? "")}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
@@ -241,7 +253,7 @@ export function ProfileOverview() {
             <CardTitle className="text-base">Linked Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{user.accounts.length}</p>
+            <p className="text-3xl font-bold">{user.accounts?.length || 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -249,7 +261,9 @@ export function ProfileOverview() {
             <CardTitle className="text-base">Total Transactions</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{user.transactions.length}</p>
+            <p className="text-3xl font-bold">
+              {user.transactions?.length || 0}
+            </p>
           </CardContent>
         </Card>
         <Card
@@ -263,7 +277,10 @@ export function ProfileOverview() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-primary">
-              {formatCurrency(user.wallet.balance, user.wallet.currency)}
+              {formatCurrency(
+                user.wallet?.balance || 0,
+                user.wallet?.currency || "USD"
+              )}
             </p>
           </CardContent>
         </Card>
@@ -336,7 +353,7 @@ export function ProfileOverview() {
           className="h-auto py-4 flex flex-col items-center justify-center gap-2 col-span-1 sm:col-span-2 md:col-span-5 mt-4"
           onClick={handleLogout}
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-3 w-5" />
           <span>Logout</span>
         </Button>
       </div>

@@ -1,21 +1,35 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { updateSecuritySettings } from "@/store/slices/profileSlice"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Eye, EyeOff, Loader2, LogOut, Smartphone } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
-import { PasswordStrengthIndicator } from "@/components/auth/password-strength-indicator"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { updateSecuritySettings } from "@/store/slices/profileSlice";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Eye, EyeOff, Loader2, LogOut, Smartphone } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { PasswordStrengthIndicator } from "@/components/auth/password-strength-indicator";
 
 const passwordFormSchema = z
   .object({
@@ -30,22 +44,23 @@ const passwordFormSchema = z
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  })
+  });
 
-type PasswordFormValues = z.infer<typeof passwordFormSchema>
+type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 export function SecuritySettings() {
-  const router = useRouter()
-  const dispatch = useAppDispatch()
-  const { isUpdating } = useAppSelector((state) => state.profile)
-  const [isLoading, setIsLoading] = useState(false)
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
-  const [biometricEnabled, setBiometricEnabled] = useState(false)
-  const [showQRCode, setShowQRCode] = useState(false)
-  const [backupCodes, setBackupCodes] = useState<string[]>([])
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const profileState = useAppSelector((state) => state.profile);
+  const { isUpdating } = profileState || { isUpdating: false };
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
@@ -54,10 +69,10 @@ export function SecuritySettings() {
       newPassword: "",
       confirmPassword: "",
     },
-  })
+  });
 
   async function onPasswordSubmit(data: PasswordFormValues) {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       await dispatch(
         updateSecuritySettings({
@@ -66,35 +81,35 @@ export function SecuritySettings() {
             currentPassword: data.currentPassword,
             newPassword: data.newPassword,
           },
-        }),
-      ).unwrap()
+        })
+      ).unwrap();
 
       toast({
         title: "Password updated",
         description: "Your password has been updated successfully.",
-      })
+      });
 
       passwordForm.reset({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
-      })
+      });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to update password. Please try again.",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   const handleTwoFactorToggle = async (checked: boolean) => {
-    setTwoFactorEnabled(checked)
+    setTwoFactorEnabled(checked);
 
     if (checked) {
-      setShowQRCode(true)
+      setShowQRCode(true);
       // Generate backup codes
       setBackupCodes([
         "ABCD-EFGH-IJKL",
@@ -105,111 +120,118 @@ export function SecuritySettings() {
         "ABCD-1234-EFGH",
         "IJKL-5678-MNOP",
         "QRST-90AB-UVWX",
-      ])
+      ]);
 
       try {
         await dispatch(
           updateSecuritySettings({
             type: "2fa",
             data: { enabled: true },
-          }),
-        ).unwrap()
+          })
+        ).unwrap();
 
         toast({
           title: "Two-factor authentication enabled",
           description: "Please save your backup codes in a secure location.",
-        })
+        });
       } catch (error) {
-        setTwoFactorEnabled(false)
-        setShowQRCode(false)
-        setBackupCodes([])
+        setTwoFactorEnabled(false);
+        setShowQRCode(false);
+        setBackupCodes([]);
 
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to enable two-factor authentication. Please try again.",
-        })
+          description:
+            "Failed to enable two-factor authentication. Please try again.",
+        });
       }
     } else {
-      setShowQRCode(false)
-      setBackupCodes([])
+      setShowQRCode(false);
+      setBackupCodes([]);
 
       try {
         await dispatch(
           updateSecuritySettings({
             type: "2fa",
             data: { enabled: false },
-          }),
-        ).unwrap()
+          })
+        ).unwrap();
 
         toast({
           title: "Two-factor authentication disabled",
-          description: "Two-factor authentication has been disabled for your account.",
-        })
+          description:
+            "Two-factor authentication has been disabled for your account.",
+        });
       } catch (error) {
-        setTwoFactorEnabled(true)
+        setTwoFactorEnabled(true);
 
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to disable two-factor authentication. Please try again.",
-        })
+          description:
+            "Failed to disable two-factor authentication. Please try again.",
+        });
       }
     }
-  }
+  };
 
   const handleBiometricToggle = async (checked: boolean) => {
-    setBiometricEnabled(checked)
+    setBiometricEnabled(checked);
 
     try {
       await dispatch(
         updateSecuritySettings({
           type: "biometric",
           data: { enabled: checked },
-        }),
-      ).unwrap()
+        })
+      ).unwrap();
 
       toast({
-        title: checked ? "Biometric authentication enabled" : "Biometric authentication disabled",
+        title: checked
+          ? "Biometric authentication enabled"
+          : "Biometric authentication disabled",
         description: checked
           ? "You can now use biometric authentication to log in."
           : "Biometric authentication has been disabled for your account.",
-      })
+      });
     } catch (error) {
-      setBiometricEnabled(!checked)
+      setBiometricEnabled(!checked);
 
       toast({
         variant: "destructive",
         title: "Error",
-        description: `Failed to ${checked ? "enable" : "disable"} biometric authentication. Please try again.`,
-      })
+        description: `Failed to ${
+          checked ? "enable" : "disable"
+        } biometric authentication. Please try again.`,
+      });
     }
-  }
+  };
 
   const handleLogoutAllDevices = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       await dispatch(
         updateSecuritySettings({
           type: "logoutAll",
           data: {},
-        }),
-      ).unwrap()
+        })
+      ).unwrap();
 
       toast({
         title: "Logged out from all devices",
         description: "You have been logged out from all other devices.",
-      })
+      });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to log out from all devices. Please try again.",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // Mock login history data
   const loginHistory = [
@@ -240,19 +262,19 @@ export function SecuritySettings() {
       date: "2023-05-10T09:15:00Z",
       current: false,
     },
-  ]
+  ];
 
   // Format date
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
       hour: "numeric",
       minute: "numeric",
-    }).format(date)
-  }
+    }).format(date);
+  };
 
   return (
     <div className="space-y-6">
@@ -267,7 +289,9 @@ export function SecuritySettings() {
           <Card>
             <CardHeader>
               <CardTitle>Change Password</CardTitle>
-              <CardDescription>Update your password to keep your account secure.</CardDescription>
+              <CardDescription>
+                Update your password to keep your account secure.
+              </CardDescription>
             </CardHeader>
             <Form {...passwordForm}>
               <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
@@ -290,14 +314,20 @@ export function SecuritySettings() {
                               variant="ghost"
                               size="sm"
                               className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                              onClick={() =>
+                                setShowCurrentPassword(!showCurrentPassword)
+                              }
                             >
                               {showCurrentPassword ? (
                                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                               ) : (
                                 <Eye className="h-4 w-4 text-muted-foreground" />
                               )}
-                              <span className="sr-only">{showCurrentPassword ? "Hide password" : "Show password"}</span>
+                              <span className="sr-only">
+                                {showCurrentPassword
+                                  ? "Hide password"
+                                  : "Show password"}
+                              </span>
                             </Button>
                           </div>
                         </FormControl>
@@ -323,14 +353,20 @@ export function SecuritySettings() {
                               variant="ghost"
                               size="sm"
                               className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              onClick={() =>
+                                setShowNewPassword(!showNewPassword)
+                              }
                             >
                               {showNewPassword ? (
                                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                               ) : (
                                 <Eye className="h-4 w-4 text-muted-foreground" />
                               )}
-                              <span className="sr-only">{showNewPassword ? "Hide password" : "Show password"}</span>
+                              <span className="sr-only">
+                                {showNewPassword
+                                  ? "Hide password"
+                                  : "Show password"}
+                              </span>
                             </Button>
                           </div>
                         </FormControl>
@@ -357,14 +393,20 @@ export function SecuritySettings() {
                               variant="ghost"
                               size="sm"
                               className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              onClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                              }
                             >
                               {showConfirmPassword ? (
                                 <EyeOff className="h-4 w-4 text-muted-foreground" />
                               ) : (
                                 <Eye className="h-4 w-4 text-muted-foreground" />
                               )}
-                              <span className="sr-only">{showConfirmPassword ? "Hide password" : "Show password"}</span>
+                              <span className="sr-only">
+                                {showConfirmPassword
+                                  ? "Hide password"
+                                  : "Show password"}
+                              </span>
                             </Button>
                           </div>
                         </FormControl>
@@ -394,22 +436,35 @@ export function SecuritySettings() {
           <Card>
             <CardHeader>
               <CardTitle>Two-Factor Authentication</CardTitle>
-              <CardDescription>Add an extra layer of security to your account.</CardDescription>
+              <CardDescription>
+                Add an extra layer of security to your account.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <h3 className="text-base font-medium">Two-Factor Authentication</h3>
-                  <p className="text-sm text-muted-foreground">Require a verification code when logging in.</p>
+                  <h3 className="text-base font-medium">
+                    Two-Factor Authentication
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Require a verification code when logging in.
+                  </p>
                 </div>
-                <Switch checked={twoFactorEnabled} onCheckedChange={handleTwoFactorToggle} disabled={isUpdating} />
+                <Switch
+                  checked={twoFactorEnabled}
+                  onCheckedChange={handleTwoFactorToggle}
+                  disabled={isUpdating}
+                />
               </div>
 
               {showQRCode && (
                 <div className="space-y-4 border rounded-lg p-4">
-                  <h3 className="text-base font-medium">Setup Two-Factor Authentication</h3>
+                  <h3 className="text-base font-medium">
+                    Setup Two-Factor Authentication
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Scan this QR code with your authenticator app (like Google Authenticator or Authy).
+                    Scan this QR code with your authenticator app (like Google
+                    Authenticator or Authy).
                   </p>
                   <div className="flex justify-center py-4">
                     <div className="bg-white p-2 rounded">
@@ -424,12 +479,16 @@ export function SecuritySettings() {
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium">Backup Codes</h4>
                     <p className="text-sm text-muted-foreground">
-                      Save these backup codes in a secure place. You can use them to access your account if you lose
-                      your authenticator device.
+                      Save these backup codes in a secure place. You can use
+                      them to access your account if you lose your authenticator
+                      device.
                     </p>
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       {backupCodes.map((code, index) => (
-                        <div key={index} className="bg-muted p-2 rounded text-center font-mono text-sm">
+                        <div
+                          key={index}
+                          className="bg-muted p-2 rounded text-center font-mono text-sm"
+                        >
                           {code}
                         </div>
                       ))}
@@ -440,12 +499,19 @@ export function SecuritySettings() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <h3 className="text-base font-medium">Biometric Authentication</h3>
+                  <h3 className="text-base font-medium">
+                    Biometric Authentication
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Use your device's biometric features (fingerprint, face) to log in.
+                    Use your device's biometric features (fingerprint, face) to
+                    log in.
                   </p>
                 </div>
-                <Switch checked={biometricEnabled} onCheckedChange={handleBiometricToggle} disabled={isUpdating} />
+                <Switch
+                  checked={biometricEnabled}
+                  onCheckedChange={handleBiometricToggle}
+                  disabled={isUpdating}
+                />
               </div>
             </CardContent>
           </Card>
@@ -455,7 +521,9 @@ export function SecuritySettings() {
           <Card>
             <CardHeader>
               <CardTitle>Login History</CardTitle>
-              <CardDescription>View your recent login activity and manage devices.</CardDescription>
+              <CardDescription>
+                View your recent login activity and manage devices.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
@@ -479,10 +547,16 @@ export function SecuritySettings() {
                       <p className="text-sm text-muted-foreground">
                         {login.location} • {login.ip}
                       </p>
-                      <p className="text-xs text-muted-foreground">{formatDate(login.date)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(login.date)}
+                      </p>
                     </div>
                     {!login.current && (
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                      >
                         <LogOut className="h-4 w-4 mr-1" />
                         Logout
                       </Button>
@@ -516,5 +590,5 @@ export function SecuritySettings() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
