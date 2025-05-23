@@ -56,10 +56,12 @@ export function LoginForm() {
     try {
       // Check for admin credentials
       if (data.username === "admin" && data.password === "Admin123") {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         // Create admin user object
         const adminUser: User = {
           id: "admin",
-          username: "admin@gmail.com",
+          username: "admin",
           email: "admin@gmail.com",
           firstName: "Admin",
           lastName: "User",
