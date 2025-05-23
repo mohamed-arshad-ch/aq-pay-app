@@ -58,7 +58,10 @@ export function WalletDepositForm() {
           description: description || "Wallet deposit",
         })
       ).unwrap();
-
+toast({
+        title: "Deposit Successful",
+        variant: "destructive",
+      });
       // Show success message
       Swal.fire({
         position: "bottom-end",
