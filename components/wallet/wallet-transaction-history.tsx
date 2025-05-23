@@ -25,9 +25,11 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 export function WalletTransactionHistory() {
   const dispatch = useAppDispatch();
@@ -128,6 +130,11 @@ export function WalletTransactionHistory() {
 function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
   const isPending = transaction.status === "PENDING";
 
+  const copyTransactionId = () => {
+    navigator.clipboard.writeText(transaction.id);
+    toast.success("Transaction ID copied to clipboard");
+  };
+
   return (
     <div
       className={`p-4 rounded-lg border ${
@@ -144,9 +151,24 @@ function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
             <div className="text-sm text-muted-foreground">
               {format(new Date(transaction.date), "MMM d, yyyy • h:mm a")}
             </div>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="text-xs text-muted-foreground">
+                ID: {transaction.id}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4"
+                onClick={copyTransactionId}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
             {transaction.reference && (
-              <div className="text-xs text-muted-foreground mt-1">
-                Ref: {transaction.reference}
+              <div className="flex items-center gap-2 mt-1">
+                <div className="text-xs text-muted-foreground">
+                  Ref: {transaction.reference}
+                </div>
               </div>
             )}
           </div>

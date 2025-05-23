@@ -58,6 +58,7 @@ import {
   XCircle,
   Clock,
   Filter,
+  Copy,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -295,7 +296,7 @@ export function WalletTransactionsManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Reference</TableHead>
+                      <TableHead>ID</TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Bank Account</TableHead>
@@ -308,7 +309,28 @@ export function WalletTransactionsManagement() {
                     {filteredTransactions.map((transaction) => (
                       <TableRow key={transaction.id}>
                         <TableCell className="font-medium">
-                          {transaction.reference}
+                          <div className="flex items-center gap-2">
+                            {transaction.id}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4"
+                              onClick={() => {
+                                if (transaction.reference) {
+                                  navigator.clipboard.writeText(
+                                    transaction.reference
+                                  );
+                                  toast({
+                                    title: "Reference Copied",
+                                    description:
+                                      "Transaction reference copied to clipboard",
+                                  });
+                                }
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </TableCell>
                         <TableCell>{transaction.userId}</TableCell>
                         <TableCell>

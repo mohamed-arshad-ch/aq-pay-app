@@ -138,10 +138,19 @@ export function WalletSendForm() {
       // Show success message
       toast({
         title: "Send Request Submitted",
-        description: `Your request to send ${formatCurrency(
-          Number(amount),
-          wallet?.currency || "USD"
-        )} to your bank account is pending approval.`,
+        description: (
+          <div className="space-y-2">
+            <p>
+              Your request to send{" "}
+              {formatCurrency(Number(amount), wallet?.currency || "USD")} to
+              your bank account is pending approval.
+            </p>
+            <p className="text-sm">
+              Transaction ID:{" "}
+              <span className="font-mono">{pendingTransaction.id}</span>
+            </p>
+          </div>
+        ),
         variant: "default",
       });
 

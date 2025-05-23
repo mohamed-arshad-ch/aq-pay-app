@@ -1,37 +1,91 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { fetchUserProfile } from "@/store/slices/profileSlice"
-import { fetchAccounts } from "@/store/slices/accountsSlice"
-import { fetchTransactions } from "@/store/slices/transactionsSlice"
-import { logout } from "@/store/slices/authSlice"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Edit, Lock, LogOut, Settings, Shield, Wallet } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/store/hooks";
+import { logout } from "@/store/slices/authSlice";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Edit, Lock, LogOut, Settings, Shield, Wallet } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { formatCurrency } from "@/lib/currency-utils";
+
+interface UserProfile {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  dateOfBirth: string;
+  profileImage: string;
+  createdAt: string;
+  lastLogin: string;
+  wallet: {
+    id: string;
+    balance: number;
+    currency: string;
+  };
+  accounts: Array<{
+    id: string;
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+  }>;
+  transactions: Array<{
+    id: string;
+    amount: number;
+    type: string;
+    status: string;
+    date: string;
+  }>;
+}
 
 export function ProfileOverview() {
-  const router = useRouter()
-  const dispatch = useAppDispatch()
-  const { user, isLoading } = useAppSelector((state) => state.profile || { user: null, isLoading: true })
-  const { accounts } = useAppSelector((state) => state.accounts)
-  const { transactions } = useAppSelector((state) => state.transactions)
-  const { wallet } = useAppSelector((state) => state.wallet)
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    dispatch(fetchUserProfile())
-    dispatch(fetchAccounts())
-    dispatch(fetchTransactions())
-  }, [dispatch])
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch("/api/profile");
+        if (!response.ok) {
+          throw new Error("Failed to fetch profile");
+        }
+        const data = await response.json();
+        setUser(data);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load profile data",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   // Calculate profile completion percentage
   const calculateProfileCompletion = () => {
-    if (!user) return 0
+    if (!user) return 0;
 
     const requiredFields = [
       "firstName",
@@ -44,96 +98,132 @@ export function ProfileOverview() {
       "zipCode",
       "country",
       "dateOfBirth",
-    ]
+    ];
 
-    const completedFields = requiredFields.filter((field) => !!user[field as keyof typeof user])
-    return Math.round((completedFields.length / requiredFields.length) * 100)
-  }
+    const completedFields = requiredFields.filter(
+      (field) => !!user[field as keyof typeof user]
+    );
+    return Math.round((completedFields.length / requiredFields.length) * 100);
+  };
 
   // Mask sensitive information
   const maskEmail = (email: string) => {
-    if (!email) return ""
-    const [username, domain] = email.split("@")
-    return `${username.substring(0, 3)}${"*".repeat(username.length - 3)}@${domain}`
-  }
+    if (!email) return "";
+    const [username, domain] = email.split("@");
+    return `${username.substring(0, 3)}${"*".repeat(
+      username.length - 3
+    )}@${domain}`;
+  };
 
   const maskPhone = (phone: string) => {
-    if (!phone) return ""
-    return `${phone.substring(0, 3)}${"*".repeat(phone.length - 7)}${phone.substring(phone.length - 4)}`
-  }
+    if (!phone) return "";
+    return `${phone.substring(0, 3)}${"*".repeat(
+      phone.length - 7
+    )}${phone.substring(phone.length - 4)}`;
+  };
 
   // Format date
   const formatDate = (dateString: string) => {
-    if (!dateString) return ""
-    const date = new Date(dateString)
+    if (!dateString) return "";
+    const date = new Date(dateString);
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
-    }).format(date)
-  }
+    }).format(date);
+  };
 
   const handleLogout = () => {
     try {
-      dispatch(logout())
+      dispatch(logout());
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account.",
-      })
-      router.push("/auth/login")
+      });
+      router.push("/auth/login");
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to log out. Please try again.",
-      })
+      });
     }
-  }
+  };
 
   if (isLoading) {
-    return <ProfileOverviewSkeleton />
+    return <ProfileOverviewSkeleton />;
   }
 
-  const profileCompletionPercentage = calculateProfileCompletion()
+  if (!user) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Failed to load profile data</p>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  const profileCompletionPercentage = calculateProfileCompletion();
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Your basic account information and status</CardDescription>
+          <CardDescription>
+            Your basic account information and status
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <Avatar className="w-24 h-24 border">
-              <AvatarImage src={user?.profileImage || ""} alt={`${user?.firstName} ${user?.lastName}`} />
+              <AvatarImage
+                src={user.profileImage || ""}
+                alt={`${user.firstName} ${user.lastName}`}
+              />
               <AvatarFallback className="text-2xl">
-                {user?.firstName?.[0]}
-                {user?.lastName?.[0]}
+                {user.firstName?.[0]}
+                {user.lastName?.[0]}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-4">
               <div>
                 <h3 className="text-xl font-semibold">
-                  {user?.firstName} {user?.lastName}
+                  {user.firstName} {user.lastName}
                 </h3>
-                <p className="text-sm text-muted-foreground">Member since {formatDate(user?.createdAt || "")}</p>
+                <p className="text-sm text-muted-foreground">
+                  Member since {formatDate(user.createdAt)}
+                </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Email</p>
-                  <p>{maskEmail(user?.email || "")}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Email
+                  </p>
+                  <p>{maskEmail(user.email)}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                  <p>{maskPhone(user?.phoneNumber || "")}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Phone
+                  </p>
+                  <p>{maskPhone(user.phoneNumber)}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Last Login</p>
-                  <p>{formatDate(user?.lastLogin || new Date().toISOString())}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Last Login
+                  </p>
+                  <p>{formatDate(user.lastLogin)}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Status
+                  </p>
                   <div className="flex items-center">
                     <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
                     <p>Active</p>
@@ -151,7 +241,7 @@ export function ProfileOverview() {
             <CardTitle className="text-base">Linked Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{accounts.length}</p>
+            <p className="text-3xl font-bold">{user.accounts.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -159,17 +249,22 @@ export function ProfileOverview() {
             <CardTitle className="text-base">Total Transactions</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{transactions.length}</p>
+            <p className="text-3xl font-bold">{user.transactions.length}</p>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer" onClick={() => router.push("/dashboard/wallet")}>
+        <Card
+          className="cursor-pointer"
+          onClick={() => router.push("/dashboard/wallet")}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center">
               <Wallet className="h-4 w-4 mr-1" /> Wallet Balance
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-primary">{wallet ? wallet.balance.toFixed(2) : "0.00"}</p>
+            <p className="text-3xl font-bold text-primary">
+              {formatCurrency(user.wallet.balance, user.wallet.currency)}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -177,13 +272,17 @@ export function ProfileOverview() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Profile Completion</CardTitle>
-          <CardDescription>Complete your profile to unlock all features</CardDescription>
+          <CardDescription>
+            Complete your profile to unlock all features
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-sm font-medium">Progress</span>
-              <span className="text-sm font-medium">{profileCompletionPercentage}%</span>
+              <span className="text-sm font-medium">
+                {profileCompletionPercentage}%
+              </span>
             </div>
             <Progress value={profileCompletionPercentage} className="h-2" />
           </div>
@@ -232,7 +331,6 @@ export function ProfileOverview() {
           <span>My Wallet</span>
         </Button>
 
-        {/* Add Logout Button */}
         <Button
           variant="destructive"
           className="h-auto py-4 flex flex-col items-center justify-center gap-2 col-span-1 sm:col-span-2 md:col-span-5 mt-4"
@@ -243,7 +341,7 @@ export function ProfileOverview() {
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 function ProfileOverviewSkeleton() {
@@ -252,7 +350,9 @@ function ProfileOverviewSkeleton() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Your basic account information and status</CardDescription>
+          <CardDescription>
+            Your basic account information and status
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
@@ -320,5 +420,5 @@ function ProfileOverviewSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }
