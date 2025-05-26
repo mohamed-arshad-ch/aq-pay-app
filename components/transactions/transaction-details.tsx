@@ -1,103 +1,219 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { fetchTransactionDetails, retryTransaction, cancelTransaction } from "@/store/slices/transactionsSlice"
-import { ArrowLeft, Share2, RefreshCw, XCircle, CheckCircle, Clock, AlertTriangle, Download } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import { toast } from "@/components/ui/use-toast"
-import { TransactionDetailsSkeleton } from "@/components/transactions/transaction-details-skeleton"
-import { cn } from "@/lib/utils"
-import { formatCurrency } from "@/lib/currency-utils"
-import { TransactionStatus, TransactionType } from "@/types"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  fetchTransactionDetails,
+  retryTransaction,
+  cancelTransaction,
+} from "@/store/slices/transactionsSlice";
+import { getWalletTransactions } from "@/store/slices/walletSlice";
+import {
+  ArrowLeft,
+  Share2,
+  RefreshCw,
+  XCircle,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  Download,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/use-toast";
+import { TransactionDetailsSkeleton } from "@/components/transactions/transaction-details-skeleton";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/currency-utils";
+import {
+  TransactionStatus,
+  TransactionType,
+  WalletTransactionType,
+  WalletTransaction,
+} from "@/types";
 
 interface TransactionDetailsProps {
-  id: string
+  id: string;
+  isWalletTransaction?: boolean;
 }
 
-export function TransactionDetails({ id }: TransactionDetailsProps) {
-  const router = useRouter()
-  const dispatch = useAppDispatch()
-  const { selectedTransaction, isLoading, error } = useAppSelector((state) => state.transactions)
-  const { currency } = useAppSelector((state) => state.settings)
+export function TransactionDetails({
+  id,
+  isWalletTransaction = false,
+}: TransactionDetailsProps) {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(true);
+  const { selectedTransaction: regularTransaction, error: regularError } =
+    useAppSelector((state) => state.transactions);
+  const {
+    transactions: walletTransactions,
+    pendingTransactions: pendingWalletTransactions,
+    error: walletError,
+  } = useAppSelector((state) => state.wallet);
+
+  const selectedTransaction = isWalletTransaction
+    ? [...walletTransactions, ...pendingWalletTransactions].find(
+        (t: WalletTransaction) => t.id === id
+      )
+    : regularTransaction;
+
+  const error = isWalletTransaction ? walletError : regularError;
 
   useEffect(() => {
-    dispatch(fetchTransactionDetails(id))
-  }, [dispatch, id])
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        if (isWalletTransaction) {
+          await dispatch(getWalletTransactions()).unwrap();
+        } else {
+          await dispatch(fetchTransactionDetails(id)).unwrap();
+        }
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to fetch transaction details",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  useEffect(() => {
-    if (error) {
+    fetchData();
+  }, [dispatch, id, isWalletTransaction]);
+
+  const handleRetry = async () => {
+    if (!selectedTransaction) return;
+
+    try {
+      if (isWalletTransaction) {
+        toast({
+          title: "Not Available",
+          description:
+            "Retry functionality is not available for wallet transactions.",
+        });
+      } else {
+        await dispatch(retryTransaction(selectedTransaction.id)).unwrap();
+        toast({
+          title: "Transaction Retried",
+          description: "Your transaction has been resubmitted for processing.",
+        });
+        router.push(`/dashboard/transfer/status?id=${selectedTransaction.id}`);
+      }
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error,
-      })
+        description: "Failed to retry transaction",
+      });
     }
-  }, [error])
-
-  const handleRetry = async () => {
-    if (!selectedTransaction) return
-
-    try {
-      await dispatch(retryTransaction(selectedTransaction.id)).unwrap()
-      toast({
-        title: "Transaction Retried",
-        description: "Your transaction has been resubmitted for processing.",
-      })
-      router.push(`/dashboard/transfer/status?id=${selectedTransaction.id}`)
-    } catch (error) {
-      // Error is already handled in the error useEffect
-    }
-  }
+  };
 
   const handleCancel = async () => {
-    if (!selectedTransaction) return
+    if (!selectedTransaction) return;
 
     try {
-      await dispatch(cancelTransaction(selectedTransaction.id)).unwrap()
-      toast({
-        title: "Transaction Cancelled",
-        description: "Your transaction has been cancelled successfully.",
-      })
-      // Refresh the transaction details
-      dispatch(fetchTransactionDetails(id))
+      if (isWalletTransaction) {
+        toast({
+          title: "Not Available",
+          description:
+            "Cancel functionality is not available for wallet transactions.",
+        });
+      } else {
+        await dispatch(cancelTransaction(selectedTransaction.id)).unwrap();
+        toast({
+          title: "Transaction Cancelled",
+          description: "Your transaction has been cancelled successfully.",
+        });
+        dispatch(fetchTransactionDetails(id));
+      }
     } catch (error) {
-      // Error is already handled in the error useEffect
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to cancel transaction",
+      });
     }
-  }
+  };
 
   const handleShare = () => {
-    if (!selectedTransaction) return
-
-    // In a real app, this would generate a shareable receipt
-    // For now, we'll just show a toast
+    if (!selectedTransaction) return;
     toast({
       title: "Share Receipt",
       description: "This feature will be available soon.",
-    })
-  }
+    });
+  };
 
   const handleDownload = () => {
-    if (!selectedTransaction) return
-
-    // In a real app, this would download a receipt
-    // For now, we'll just show a toast
+    if (!selectedTransaction) return;
     toast({
       title: "Download Receipt",
       description: "This feature will be available soon.",
-    })
+    });
+  };
+
+  if (isLoading) {
+    return <TransactionDetailsSkeleton />;
   }
 
-  if (isLoading || !selectedTransaction) {
-    return <TransactionDetailsSkeleton />
+  if (error) {
+    return (
+      <div className="container px-4 py-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold">Transaction Details</h1>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold mb-2">
+                Error Loading Transaction
+              </h2>
+              <p className="text-muted-foreground">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!selectedTransaction) {
+    return (
+      <div className="container px-4 py-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold">Transaction Details</h1>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold mb-2">
+                Transaction Not Found
+              </h2>
+              <p className="text-muted-foreground">
+                The requested transaction could not be found.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "short",
@@ -105,53 +221,65 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
       hour: "numeric",
       minute: "numeric",
       second: "numeric",
-    }).format(date)
-  }
+    }).format(date);
+  };
 
   const getStatusIcon = (status: TransactionStatus) => {
     switch (status) {
       case TransactionStatus.COMPLETED:
-        return <CheckCircle className="h-5 w-5 text-green-500" />
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case TransactionStatus.REJECTED:
-        return <XCircle className="h-5 w-5 text-red-500" />
+        return <XCircle className="h-5 w-5 text-red-500" />;
       case TransactionStatus.CANCELLED:
-        return <AlertTriangle className="h-5 w-5 text-gray-500" />
+        return <AlertTriangle className="h-5 w-5 text-gray-500" />;
       case TransactionStatus.PENDING:
       default:
-        return <Clock className="h-5 w-5 text-yellow-500" />
+        return <Clock className="h-5 w-5 text-yellow-500" />;
     }
-  }
+  };
 
   const getStatusBadge = (status: TransactionStatus) => {
     switch (status) {
       case TransactionStatus.COMPLETED:
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+          <Badge
+            variant="outline"
+            className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+          >
             Completed
           </Badge>
-        )
+        );
       case TransactionStatus.PENDING:
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+          <Badge
+            variant="outline"
+            className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+          >
             Pending
           </Badge>
-        )
+        );
       case TransactionStatus.REJECTED:
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
+          <Badge
+            variant="outline"
+            className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+          >
             Rejected
           </Badge>
-        )
+        );
       case TransactionStatus.CANCELLED:
         return (
-          <Badge variant="outline" className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+          <Badge
+            variant="outline"
+            className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+          >
             Cancelled
           </Badge>
-        )
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   return (
     <div className="container px-4 py-6 pb-20">
@@ -159,7 +287,11 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-bold">Transaction Details</h1>
+        <h1 className="text-xl font-bold">
+          {isWalletTransaction
+            ? "Wallet Transaction Details"
+            : "Transaction Details"}
+        </h1>
       </div>
 
       <div className="space-y-6">
@@ -171,13 +303,24 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
                 <p
                   className={cn(
                     "text-2xl font-bold",
-                    selectedTransaction.type === TransactionType.DEPOSIT
+                    selectedTransaction.type ===
+                      (isWalletTransaction
+                        ? WalletTransactionType.DEPOSIT
+                        : TransactionType.DEPOSIT)
                       ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400",
+                      : "text-red-600 dark:text-red-400"
                   )}
                 >
-                  {selectedTransaction.type === TransactionType.DEPOSIT ? "+" : "-"}
-                  {formatCurrency(selectedTransaction.amount, currency)}
+                  {selectedTransaction.type ===
+                  (isWalletTransaction
+                    ? WalletTransactionType.DEPOSIT
+                    : TransactionType.DEPOSIT)
+                    ? "+"
+                    : "-"}
+                  {formatCurrency(
+                    selectedTransaction.amount,
+                    selectedTransaction.currency
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -188,35 +331,49 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
 
             <Separator />
 
-            <div>
-              <p className="text-sm text-muted-foreground">From</p>
-              <p className="font-medium">{selectedTransaction.fromAccountName || "External Account"}</p>
-              {selectedTransaction.fromAccountId !== "external" && (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    •••• {selectedTransaction.fromAccountNumber?.slice(-4) || ""}
+            {!isWalletTransaction && (
+              <>
+                <div>
+                  <p className="text-sm text-muted-foreground">From</p>
+                  <p className="font-medium">
+                    {selectedTransaction.fromAccountName || "External Account"}
                   </p>
-                  {selectedTransaction.fromIfscCode && (
-                    <p className="text-sm text-muted-foreground font-mono">IFSC: {selectedTransaction.fromIfscCode}</p>
+                  {selectedTransaction.fromAccountId !== "external" && (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        ••••{" "}
+                        {selectedTransaction.fromAccountNumber?.slice(-4) || ""}
+                      </p>
+                      {selectedTransaction.fromIfscCode && (
+                        <p className="text-sm text-muted-foreground font-mono">
+                          IFSC: {selectedTransaction.fromIfscCode}
+                        </p>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </div>
+                </div>
 
-            <div>
-              <p className="text-sm text-muted-foreground">To</p>
-              <p className="font-medium">{selectedTransaction.toAccountName || "External Account"}</p>
-              {selectedTransaction.toAccountId !== "external" && (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    •••• {selectedTransaction.toAccountNumber?.slice(-4) || ""}
+                <div>
+                  <p className="text-sm text-muted-foreground">To</p>
+                  <p className="font-medium">
+                    {selectedTransaction.toAccountName || "External Account"}
                   </p>
-                  {selectedTransaction.toIfscCode && (
-                    <p className="text-sm text-muted-foreground font-mono">IFSC: {selectedTransaction.toIfscCode}</p>
+                  {selectedTransaction.toAccountId !== "external" && (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        ••••{" "}
+                        {selectedTransaction.toAccountNumber?.slice(-4) || ""}
+                      </p>
+                      {selectedTransaction.toIfscCode && (
+                        <p className="text-sm text-muted-foreground font-mono">
+                          IFSC: {selectedTransaction.toIfscCode}
+                        </p>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
 
             {selectedTransaction.description && (
               <div>
@@ -225,10 +382,12 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
               </div>
             )}
 
-            <div>
-              <p className="text-sm text-muted-foreground">Category</p>
-              <p className="font-medium">{selectedTransaction.category}</p>
-            </div>
+            {!isWalletTransaction && (
+              <div>
+                <p className="text-sm text-muted-foreground">Category</p>
+                <p className="font-medium">{selectedTransaction.category}</p>
+              </div>
+            )}
 
             <div>
               <p className="text-sm text-muted-foreground">Reference Number</p>
@@ -237,20 +396,28 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
 
             <div>
               <p className="text-sm text-muted-foreground">Date & Time</p>
-              <p className="font-medium">{formatDate(selectedTransaction.date)}</p>
+              <p className="font-medium">
+                {formatDate(selectedTransaction.date)}
+              </p>
             </div>
 
-            {selectedTransaction.status === TransactionStatus.REJECTED && selectedTransaction.rejectedReason && (
-              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
-                <p className="text-sm font-medium text-red-800 dark:text-red-300">Reason for Rejection</p>
-                <p className="text-sm text-red-700 dark:text-red-200 mt-1">{selectedTransaction.rejectedReason}</p>
-              </div>
-            )}
+            {selectedTransaction.status === TransactionStatus.REJECTED &&
+              selectedTransaction.rejectedReason && (
+                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                    Reason for Rejection
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-200 mt-1">
+                    {selectedTransaction.rejectedReason}
+                  </p>
+                </div>
+              )}
 
             {selectedTransaction.status === TransactionStatus.PENDING && (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-md">
                 <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                  This transaction is being processed and may take up to 30 minutes to complete.
+                  This transaction is being processed and may take up to 30
+                  minutes to complete.
                 </p>
               </div>
             )}
@@ -267,22 +434,30 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
                 </div>
                 <div>
                   <p className="font-medium">Transaction Initiated</p>
-                  <p className="text-sm text-muted-foreground">{formatDate(selectedTransaction.createdAt)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatDate(selectedTransaction.createdAt)}
+                  </p>
                 </div>
               </div>
 
               {selectedTransaction.status !== TransactionStatus.PENDING && (
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5">{getStatusIcon(selectedTransaction.status)}</div>
+                  <div className="mt-0.5">
+                    {getStatusIcon(selectedTransaction.status)}
+                  </div>
                   <div>
                     <p className="font-medium">
-                      {selectedTransaction.status === TransactionStatus.COMPLETED
+                      {selectedTransaction.status ===
+                      TransactionStatus.COMPLETED
                         ? "Transaction Completed"
-                        : selectedTransaction.status === TransactionStatus.REJECTED
-                          ? "Transaction Rejected"
-                          : "Transaction Cancelled"}
+                        : selectedTransaction.status ===
+                          TransactionStatus.REJECTED
+                        ? "Transaction Rejected"
+                        : "Transaction Cancelled"}
                     </p>
-                    <p className="text-sm text-muted-foreground">{formatDate(selectedTransaction.updatedAt)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(selectedTransaction.updatedAt)}
+                    </p>
                   </div>
                 </div>
               )}
@@ -294,7 +469,9 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
                   </div>
                   <div>
                     <p className="font-medium">Processing</p>
-                    <p className="text-sm text-muted-foreground">Transaction is being processed</p>
+                    <p className="text-sm text-muted-foreground">
+                      Transaction is being processed
+                    </p>
                   </div>
                 </div>
               )}
@@ -308,7 +485,11 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
               <Share2 className="h-4 w-4" />
               Share
             </Button>
-            <Button onClick={handleDownload} variant="outline" className="gap-2">
+            <Button
+              onClick={handleDownload}
+              variant="outline"
+              className="gap-2"
+            >
               <Download className="h-4 w-4" />
               Download
             </Button>
@@ -322,7 +503,11 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
           )}
 
           {selectedTransaction.status === TransactionStatus.PENDING && (
-            <Button onClick={handleCancel} variant="destructive" className="w-full gap-2">
+            <Button
+              onClick={handleCancel}
+              variant="destructive"
+              className="w-full gap-2"
+            >
               <XCircle className="h-4 w-4" />
               Cancel Transaction
             </Button>
@@ -330,5 +515,5 @@ export function TransactionDetails({ id }: TransactionDetailsProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

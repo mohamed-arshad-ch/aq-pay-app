@@ -4,12 +4,12 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import type { Wallet, WalletTransaction } from "@/types";
-import { WalletTransactionStatus } from "@/types";
+import { WalletTransactionStatus, WalletTransactionType } from "@/types";
 import {
   fetchWalletDetails,
+  fetchWalletTransactions,
   addWalletBalance,
   sendWalletBalance,
-  fetchWalletTransactions,
 } from "@/api/wallet";
 
 interface WalletState {
@@ -18,19 +18,13 @@ interface WalletState {
   pendingTransactions: WalletTransaction[];
   isLoading: boolean;
   error: string | null;
-  transactionsLoading: boolean;
-  transactionsError: string | null;
-  notifications: WalletNotification[];
-  hasUnreadNotifications: boolean;
-}
-
-export interface WalletNotification {
-  id: string;
-  transactionId: string;
-  message: string;
-  status: "unread" | "read";
-  createdAt: string;
-  type: "success" | "error" | "info";
+  notifications: Array<{
+    id: string;
+    message: string;
+    type: string;
+    read: boolean;
+    createdAt: string;
+  }>;
 }
 
 const initialState: WalletState = {
@@ -39,10 +33,7 @@ const initialState: WalletState = {
   pendingTransactions: [],
   isLoading: false,
   error: null,
-  transactionsLoading: false,
-  transactionsError: null,
   notifications: [],
-  hasUnreadNotifications: false,
 };
 
 // Async thunks
@@ -50,10 +41,13 @@ export const getWalletDetails = createAsyncThunk(
   "wallet/getWalletDetails",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetchWalletDetails();
-      return response;
+      return await fetchWalletDetails();
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue(
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch wallet details"
+      );
     }
   }
 );
@@ -62,10 +56,13 @@ export const getWalletTransactions = createAsyncThunk(
   "wallet/getWalletTransactions",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetchWalletTransactions();
-      return response;
+      return await fetchWalletTransactions();
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue(
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch wallet transactions"
+      );
     }
   }
 );
@@ -77,10 +74,11 @@ export const depositToWallet = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await addWalletBalance(amount, description);
-      return response;
+      return await addWalletBalance(amount, description);
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to add balance"
+      );
     }
   }
 );
@@ -92,18 +90,19 @@ export const sendFromWallet = createAsyncThunk(
       amount,
       bankAccountId,
       description,
-    }: { amount: number; bankAccountId: string; description: string },
+    }: {
+      amount: number;
+      bankAccountId: string;
+      description: string;
+    },
     { rejectWithValue }
   ) => {
     try {
-      const response = await sendWalletBalance(
-        amount,
-        bankAccountId,
-        description
-      );
-      return response;
+      return await sendWalletBalance(amount, bankAccountId, description);
     } catch (error) {
-      return rejectWithValue((error as Error).message);
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to send money"
+      );
     }
   }
 );
@@ -112,99 +111,87 @@ const walletSlice = createSlice({
   name: "wallet",
   initialState,
   reducers: {
-    addPendingTransaction: (
+    clearWalletError: (state) => {
+      state.error = null;
+    },
+    setAllTransactions: (state, action: PayloadAction<WalletTransaction[]>) => {
+      state.transactions = action.payload;
+    },
+    updateTransaction: (
       state,
-      action: PayloadAction<WalletTransaction>
+      action: PayloadAction<WalletTransaction & { wallet?: Wallet }>
     ) => {
-      state.pendingTransactions.unshift(action.payload);
-    },
-    clearPendingTransactions: (state) => {
-      state.pendingTransactions = [];
-    },
-    updateWalletBalance: (state, action: PayloadAction<number>) => {
-      if (state.wallet) {
-        state.wallet.balance = action.payload;
-      }
-    },
-    addNotification: (state, action: PayloadAction<WalletNotification>) => {
-      state.notifications.unshift(action.payload);
-      state.hasUnreadNotifications = true;
-    },
-    markNotificationAsRead: (state, action: PayloadAction<string>) => {
-      const notification = state.notifications.find(
-        (n) => n.id === action.payload
+      const index = state.transactions.findIndex(
+        (t) => t.id === action.payload.id
       );
-      if (notification) {
-        notification.status = "read";
+      if (index !== -1) {
+        state.transactions[index] = action.payload;
       }
-      state.hasUnreadNotifications = state.notifications.some(
-        (n) => n.status === "unread"
-      );
-    },
-    markAllNotificationsAsRead: (state) => {
-      state.notifications.forEach((notification) => {
-        notification.status = "read";
-      });
-      state.hasUnreadNotifications = false;
+
+      // Update wallet balance only if:
+      // 1. The transaction is completed
+      // 2. It's a TRANSFER type transaction
+      // 3. The wallet object is provided
+      if (
+        action.payload.wallet &&
+        state.wallet &&
+        action.payload.status === WalletTransactionStatus.COMPLETED &&
+        action.payload.type === WalletTransactionType.TRANSFER
+      ) {
+        state.wallet.balance = action.payload.wallet.balance;
+      }
     },
     updateTransactionStatus: (
       state,
       action: PayloadAction<{
         transactionId: string;
         status: WalletTransactionStatus;
-        adminNote?: string;
+        wallet?: Wallet;
       }>
     ) => {
-      const { transactionId, status, adminNote } = action.payload;
-
-      // Find the transaction in either pendingTransactions or transactions
-      const pendingTransaction = state.pendingTransactions.find(
-        (t) => t.id === transactionId
-      );
+      const { transactionId, status, wallet } = action.payload;
       const transaction = state.transactions.find(
         (t) => t.id === transactionId
       );
-
-      const targetTransaction = pendingTransaction || transaction;
-
-      if (targetTransaction) {
-        // Update transaction status and note
-        targetTransaction.status = status;
-        targetTransaction.updatedAt = new Date().toISOString();
-        if (adminNote) {
-          targetTransaction.adminNote = adminNote;
-        }
-
-        // Handle balance updates
-        if (state.wallet) {
-          if (status === WalletTransactionStatus.COMPLETED) {
-            // Deduct from balance when approved
-            state.wallet.balance -= targetTransaction.amount;
-          } else if (
-            (status === WalletTransactionStatus.FAILED ||
-              status === WalletTransactionStatus.CANCELLED) &&
-            targetTransaction.status === WalletTransactionStatus.PENDING
-          ) {
-            // Refund the balance if the transaction was pending and is now rejected/cancelled
-            state.wallet.balance += targetTransaction.amount;
-          }
-        }
-
-        // Move transaction between arrays based on status
-        if (pendingTransaction) {
-          // Remove from pendingTransactions
-          state.pendingTransactions = state.pendingTransactions.filter(
-            (t) => t.id !== transactionId
-          );
-          // Add to main transactions array
-          state.transactions.unshift(targetTransaction);
+      if (transaction) {
+        transaction.status = status;
+        if (wallet && state.wallet) {
+          state.wallet.balance = wallet.balance;
         }
       }
+    },
+    addNotification: (
+      state,
+      action: PayloadAction<{
+        message: string;
+        type: string;
+      }>
+    ) => {
+      state.notifications.unshift({
+        id: Math.random().toString(36).substr(2, 9),
+        message: action.payload.message,
+        type: action.payload.type,
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+    },
+    markNotificationAsRead: (state, action: PayloadAction<string>) => {
+      const notification = state.notifications.find(
+        (n) => n.id === action.payload
+      );
+      if (notification) {
+        notification.read = true;
+      }
+    },
+    markAllNotificationsAsRead: (state) => {
+      state.notifications.forEach((notification) => {
+        notification.read = true;
+      });
     },
   },
   extraReducers: (builder) => {
     builder
-      // Get wallet details
+      // Get Wallet Details
       .addCase(getWalletDetails.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -217,20 +204,25 @@ const walletSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      // Get wallet transactions
+      // Get Wallet Transactions
       .addCase(getWalletTransactions.pending, (state) => {
-        state.transactionsLoading = true;
-        state.transactionsError = null;
+        state.isLoading = true;
+        state.error = null;
       })
       .addCase(getWalletTransactions.fulfilled, (state, action) => {
-        state.transactionsLoading = false;
-        state.transactions = action.payload;
+        state.isLoading = false;
+        state.transactions = action.payload.filter(
+          (t) => t.status !== WalletTransactionStatus.PENDING
+        );
+        state.pendingTransactions = action.payload.filter(
+          (t) => t.status === WalletTransactionStatus.PENDING
+        );
       })
       .addCase(getWalletTransactions.rejected, (state, action) => {
-        state.transactionsLoading = false;
-        state.transactionsError = action.payload as string;
+        state.isLoading = false;
+        state.error = action.payload as string;
       })
-      // Deposit to wallet
+      // Deposit to Wallet
       .addCase(depositToWallet.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -240,24 +232,26 @@ const walletSlice = createSlice({
         if (state.wallet) {
           state.wallet.balance = action.payload.newBalance;
         }
-        state.transactions.unshift(action.payload.transaction);
-        state.pendingTransactions = state.pendingTransactions.filter(
-          (tx) => tx.id !== action.payload.transaction.id
-        );
+        state.transactions = [
+          action.payload.transaction,
+          ...state.transactions,
+        ];
       })
       .addCase(depositToWallet.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      // Send from wallet
+      // Send from Wallet
       .addCase(sendFromWallet.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(sendFromWallet.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Only add to pendingTransactions, not to main transactions array
-        state.pendingTransactions.unshift(action.payload.transaction);
+        state.pendingTransactions = [
+          action.payload.transaction,
+          ...state.pendingTransactions,
+        ];
       })
       .addCase(sendFromWallet.rejected, (state, action) => {
         state.isLoading = false;
@@ -267,13 +261,12 @@ const walletSlice = createSlice({
 });
 
 export const {
-  addPendingTransaction,
-  clearPendingTransactions,
-  updateWalletBalance,
+  clearWalletError,
+  setAllTransactions,
+  updateTransaction,
+  updateTransactionStatus,
   addNotification,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-  updateTransactionStatus,
 } = walletSlice.actions;
-
 export default walletSlice.reducer;

@@ -1,15 +1,21 @@
-"use client"
+"use client";
 
-import { useAppSelector } from "@/store/hooks"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/currency-utils"
-import type { WalletStatus } from "@/types"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowUpRight, ArrowDownRight, AlertCircle } from "lucide-react"
+import { useAppSelector } from "@/store/hooks";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { formatCurrency } from "@/lib/currency-utils";
+import type { WalletStatus } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle } from "lucide-react";
 
 export function WalletOverview() {
-  const { wallet, transactions, isLoading } = useAppSelector((state) => state.wallet)
+  const { wallet, isLoading } = useAppSelector((state) => state.wallet);
 
   if (isLoading || !wallet) {
     return (
@@ -27,20 +33,8 @@ export function WalletOverview() {
           <Skeleton className="h-20 w-full" />
         </CardContent>
       </Card>
-    )
+    );
   }
-
-  // Calculate total deposits and withdrawals for the last 30 days
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-  const recentTransactions = transactions.filter((tx) => new Date(tx.date) >= thirtyDaysAgo)
-
-  const totalDeposits = recentTransactions.filter((tx) => tx.type === "DEPOSIT").reduce((sum, tx) => sum + tx.amount, 0)
-
-  const totalWithdrawals = recentTransactions
-    .filter((tx) => tx.type === "WITHDRAWAL")
-    .reduce((sum, tx) => sum + tx.amount, 0)
 
   return (
     <Card>
@@ -54,30 +48,8 @@ export function WalletOverview() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-4xl font-bold mb-6 text-primary">{formatCurrency(wallet.balance, wallet.currency)}</div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="bg-muted/30">
-            <CardContent className="p-4">
-              <div className="flex items-center text-green-600 mb-1">
-                <ArrowUpRight className="h-4 w-4 mr-1" />
-                <span className="text-sm font-medium">Deposits</span>
-              </div>
-              <div className="text-xl font-semibold">{formatCurrency(totalDeposits, wallet.currency)}</div>
-              <div className="text-xs text-muted-foreground mt-1">Last 30 days</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-muted/30">
-            <CardContent className="p-4">
-              <div className="flex items-center text-blue-600 mb-1">
-                <ArrowDownRight className="h-4 w-4 mr-1" />
-                <span className="text-sm font-medium">Sent</span>
-              </div>
-              <div className="text-xl font-semibold">{formatCurrency(totalWithdrawals, wallet.currency)}</div>
-              <div className="text-xs text-muted-foreground mt-1">Last 30 days</div>
-            </CardContent>
-          </Card>
+        <div className="text-4xl font-bold mb-6 text-primary">
+          {formatCurrency(wallet.balance, wallet.currency)}
         </div>
 
         {wallet.status !== "ACTIVE" && (
@@ -95,22 +67,22 @@ export function WalletOverview() {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function WalletStatusBadge({ status }: { status: WalletStatus }) {
   switch (status) {
     case "ACTIVE":
-      return <Badge className="bg-green-500">Active</Badge>
+      return <Badge className="bg-green-500">Active</Badge>;
     case "SUSPENDED":
       return (
         <Badge variant="outline" className="border-yellow-500 text-yellow-500">
           Suspended
         </Badge>
-      )
+      );
     case "CLOSED":
-      return <Badge variant="destructive">Closed</Badge>
+      return <Badge variant="destructive">Closed</Badge>;
     default:
-      return null
+      return null;
   }
 }

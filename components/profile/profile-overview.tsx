@@ -19,6 +19,7 @@ import { Edit, Lock, LogOut, Settings, Shield, Wallet } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { formatCurrency } from "@/lib/currency-utils";
 import { responseCookiesToRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { BankAccount } from "@/types";
 
 interface UserProfile {
   id: string;
@@ -60,6 +61,7 @@ export function ProfileOverview() {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [accounts, setAccounts] = useState<BankAccount[]>([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -82,6 +84,30 @@ export function ProfileOverview() {
     };
 
     fetchProfile();
+  }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch("/api/user/accounts");
+      if (!response.ok) {
+        throw new Error("Failed to fetch accounts");
+      }
+      const data = await response.json();
+      setAccounts(data);
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch accounts. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccounts();
   }, []);
 
   // Calculate profile completion percentage
@@ -253,7 +279,7 @@ export function ProfileOverview() {
             <CardTitle className="text-base">Linked Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{user.accounts?.length || 0}</p>
+            <p className="text-3xl font-bold">{accounts?.length || 0}</p>
           </CardContent>
         </Card>
         <Card>

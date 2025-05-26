@@ -1,20 +1,11 @@
 "use client";
 
 import type React from "react";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  sendFromWallet,
-  addPendingTransaction,
-} from "@/store/slices/walletSlice";
-import type {
-  WalletTransaction,
-  WalletTransactionType,
-  WalletTransactionStatus,
-  BankAccount,
-} from "@/types";
+import { sendFromWallet } from "@/store/slices/walletSlice";
+import type { BankAccount } from "@/types";
 import { formatCurrency } from "@/lib/currency-utils";
 import {
   Card,
@@ -37,7 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { v4 as uuidv4 } from "uuid";
+import Swal from "sweetalert2";
 
 export function WalletSendForm() {
   const router = useRouter();
@@ -108,29 +99,9 @@ export function WalletSendForm() {
     // Clear errors
     setErrors({});
 
-    // Create a pending transaction
-    const pendingTransaction: WalletTransaction = {
-      id: uuidv4(),
-      walletId: wallet?.id || "",
-      userId: wallet?.userId || "",
-      amount: Number(amount),
-      currency: wallet?.currency || "USD",
-      type: "WITHDRAWAL" as WalletTransactionType,
-      status: "PENDING" as WalletTransactionStatus,
-      description: description || "Send to bank account",
-      fee: 0,
-      date: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      bankAccountId,
-    };
-
-    // Add pending transaction to the store
-    dispatch(addPendingTransaction(pendingTransaction));
-
     try {
       // Process the send request
-      await dispatch(
+      const result = await dispatch(
         sendFromWallet({
           amount: Number(amount),
           bankAccountId,
@@ -138,35 +109,44 @@ export function WalletSendForm() {
         })
       ).unwrap();
 
-      // Show success message
-      toast({
+      // Show success message with SweetAlert
+      await Swal.fire({
+        position: "bottom-end",
+        icon: "success",
         title: "Send Request Submitted",
-        description: (
-          <div className="space-y-2">
-            <p>
-              Your request to send{" "}
-              {formatCurrency(Number(amount), wallet?.currency || "USD")} to
-              your bank account is pending approval.
-            </p>
-            <p className="text-sm">
-              Transaction ID:{" "}
-              <span className="font-mono">{pendingTransaction.id}</span>
-            </p>
-          </div>
-        ),
-        variant: "default",
+        text: `Your request to send ${formatCurrency(
+          Number(amount),
+          wallet?.currency || "USD"
+        )} to your bank account is pending approval.`,
+        showConfirmButton: false,
+        timer: 3000,
+        toast: true,
+        customClass: {
+          popup: "swal2-toast",
+          title: "swal2-toast-title",
+          htmlContainer: "swal2-toast-content",
+        },
       });
 
-      // Redirect to wallet page
+      // Redirect to wallet dashboard
       router.push("/dashboard/wallet");
     } catch (error) {
-      // Show error message
-      toast({
+      // Show error message with SweetAlert
+      Swal.fire({
+        position: "bottom-end",
+        icon: "error",
         title: "Send Request Failed",
-        description:
+        text:
           (error as Error).message ||
           "An error occurred while processing your send request.",
-        variant: "destructive",
+        showConfirmButton: false,
+        timer: 3000,
+        toast: true,
+        customClass: {
+          popup: "swal2-toast",
+          title: "swal2-toast-title",
+          htmlContainer: "swal2-toast-content",
+        },
       });
     }
   };

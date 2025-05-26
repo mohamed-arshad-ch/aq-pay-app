@@ -53,173 +53,76 @@ const saveTransactionsToStorage = (transactions: WalletTransaction[]) => {
 };
 
 // Fetch wallet details
-export const fetchWalletDetails = async (): Promise<Wallet> => {
-  try {
-    // In a real app, this would be an API call
-    // const response = await apiClient.get('/wallet')
-    // return response.data
-
-    // For development, return from localStorage
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const wallet = getWalletFromStorage();
-        resolve(wallet);
-      }, 500);
-    });
-  } catch (error) {
-    console.error("Error fetching wallet details:", error);
-    throw error;
+export async function fetchWalletDetails(): Promise<Wallet> {
+  const response = await fetch("/api/user/wallet");
+  if (!response.ok) {
+    throw new Error("Failed to fetch wallet details");
   }
-};
+  return response.json();
+}
 
-// Fetch wallet transactions
-export const fetchWalletTransactions = async (): Promise<
+// Fetch wallet transactions for the logged-in user
+export async function fetchWalletTransactions(): Promise<WalletTransaction[]> {
+  const response = await fetch("/api/user/wallet/transactions");
+  if (!response.ok) {
+    throw new Error("Failed to fetch wallet transactions");
+  }
+  return response.json();
+}
+
+// Fetch all wallet transactions (admin only)
+export async function fetchAllWalletTransactions(): Promise<
   WalletTransaction[]
-> => {
-  try {
-    // In a real app, this would be an API call
-    // const response = await apiClient.get('/wallet/transactions')
-    // return response.data
-
-    // For development, return from localStorage
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const transactions = getTransactionsFromStorage();
-        resolve(transactions);
-      }, 500);
-    });
-  } catch (error) {
-    console.error("Error fetching wallet transactions:", error);
-    throw error;
+> {
+  const response = await fetch("/api/admin/wallet/transactions");
+  if (!response.ok) {
+    throw new Error("Failed to fetch all wallet transactions");
   }
-};
+  return response.json();
+}
 
 // Add balance to wallet
-export const addWalletBalance = async (
+export async function addWalletBalance(
   amount: number,
   description: string
-): Promise<{ newBalance: number; transaction: WalletTransaction }> => {
-  try {
-    // In a real app, this would be an API call
-    // const response = await apiClient.post('/wallet/deposit', { amount, description })
-    // return response.data
+): Promise<{ transaction: WalletTransaction; newBalance: number }> {
+  const response = await fetch("/api/user/wallet", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ amount, description }),
+  });
 
-    // For development, use localStorage
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Get current wallet and transactions
-        const wallet = getWalletFromStorage();
-        const transactions = getTransactionsFromStorage();
-
-        // Calculate new balance
-        const newBalance = wallet.balance + amount;
-
-        // Update wallet
-        const updatedWallet = {
-          ...wallet,
-          balance: newBalance,
-          updatedAt: new Date().toISOString(),
-        };
-
-        // Create new transaction
-        const newTransaction: WalletTransaction = {
-          id: uuidv4(),
-          walletId: wallet.id,
-          userId: wallet.userId,
-          amount,
-          currency: wallet.currency,
-          type: WalletTransactionType.DEPOSIT,
-          status: WalletTransactionStatus.COMPLETED,
-          description,
-          date: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        // Add transaction to list
-        const updatedTransactions = [newTransaction, ...transactions];
-
-        // Save to localStorage
-        saveWalletToStorage(updatedWallet);
-        saveTransactionsToStorage(updatedTransactions);
-
-        resolve({
-          newBalance,
-          transaction: newTransaction,
-        });
-      }, 1000);
-    });
-  } catch (error) {
-    console.error("Error adding balance to wallet:", error);
-    throw error;
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to add balance");
   }
-};
 
-// Send balance from wallet
-export const sendWalletBalance = async (
+  return response.json();
+}
+
+// Send money from wallet
+export async function sendWalletBalance(
   amount: number,
   bankAccountId: string,
   description: string
-): Promise<{ transaction: WalletTransaction }> => {
-  try {
-    // In a real app, this would be an API call
-    // const response = await apiClient.post('/wallet/send', { amount, bankAccountId, description })
-    // return response.data
+): Promise<{ transaction: WalletTransaction }> {
+  const response = await fetch("/api/user/wallet/send", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ amount, bankAccountId, description }),
+  });
 
-    // For development, use localStorage
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Get current wallet and transactions
-        const wallet = getWalletFromStorage();
-        const transactions = getTransactionsFromStorage();
-
-        if (amount > wallet.balance) {
-          reject(new Error("Insufficient funds"));
-          return;
-        }
-
-        // Create a pending transaction
-        const newTransaction: WalletTransaction = {
-          id: uuidv4(),
-          walletId: wallet.id,
-          userId: wallet.userId,
-          amount,
-          currency: wallet.currency,
-          type: WalletTransactionType.WITHDRAWAL,
-          status: WalletTransactionStatus.PENDING, // Start as pending
-          description,
-          reference: `REF${Math.floor(Math.random() * 1000000)}`,
-          fee: 0, // Set fee to 0
-          date: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          bankAccountId, // Store the bank account ID
-        };
-
-        // Update wallet balance
-        const updatedWallet = {
-          ...wallet,
-          balance: wallet.balance - amount, // Only deduct the amount without fee
-          updatedAt: new Date().toISOString(),
-        };
-
-        // Add transaction to list
-        const updatedTransactions = [newTransaction, ...transactions];
-
-        // Save to localStorage
-        saveWalletToStorage(updatedWallet);
-        saveTransactionsToStorage(updatedTransactions);
-
-        resolve({
-          transaction: newTransaction,
-        });
-      }, 1000);
-    });
-  } catch (error) {
-    console.error("Error sending balance from wallet:", error);
-    throw error;
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to send money");
   }
-};
+
+  return response.json();
+}
 
 // Update transaction status (for admin use)
 export const updateTransactionStatus = async (

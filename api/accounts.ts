@@ -21,7 +21,7 @@ const setStoredAccounts = (accounts: BankAccount[]) => {
 export const accountsApi = {
   getAccounts: async (): Promise<BankAccount[]> => {
     try {
-      const response = await fetch("/api/accounts");
+      const response = await fetch("/api/user/accounts");
       if (!response.ok) {
         throw new Error("Failed to fetch accounts");
       }
@@ -34,7 +34,7 @@ export const accountsApi = {
 
   getAccount: async (id: string): Promise<BankAccount> => {
     try {
-      const response = await fetch(`/api/accounts/${id}`);
+      const response = await fetch(`/api/user/accounts/${id}`);
       if (!response.ok) {
         throw new Error("Account not found");
       }
@@ -54,7 +54,7 @@ export const accountsApi = {
     accountData: Partial<BankAccount>
   ): Promise<BankAccount> => {
     try {
-      const response = await fetch("/api/accounts", {
+      const response = await fetch("/api/user/accounts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,7 +95,7 @@ export const accountsApi = {
     accountData: Partial<BankAccount>
   ): Promise<BankAccount> => {
     try {
-      const response = await fetch(`/api/accounts/${id}`, {
+      const response = await fetch(`/api/user/accounts/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -137,7 +137,7 @@ export const accountsApi = {
 
   deleteAccount: async (id: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/accounts/${id}`, {
+      const response = await fetch(`/api/user/accounts/${id}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -153,7 +153,7 @@ export const accountsApi = {
 
   setDefaultAccount: async (id: string): Promise<BankAccount> => {
     try {
-      const response = await fetch(`/api/accounts/${id}/default`, {
+      const response = await fetch(`/api/user/accounts/${id}/default`, {
         method: "POST",
       });
       if (!response.ok) {
@@ -181,7 +181,7 @@ export const accountsApi = {
 
   getAccountBalance: async (id: string): Promise<{ balance: number }> => {
     try {
-      const response = await fetch(`/api/accounts/${id}/balance`);
+      const response = await fetch(`/api/user/accounts/${id}/balance`);
       if (!response.ok) {
         throw new Error("Failed to get account balance");
       }
@@ -199,7 +199,7 @@ export const accountsApi = {
 
   getAccountTransactions: async (id: string): Promise<Transaction[]> => {
     try {
-      const response = await fetch(`/api/accounts/${id}/transactions`);
+      const response = await fetch(`/api/user/accounts/${id}/transactions`);
       if (!response.ok) {
         throw new Error("Failed to fetch account transactions");
       }

@@ -8,35 +8,74 @@ generator client {
 }
 
 model Account {
-  id              String      @id @default(cuid())
-  accountName     String
+  id                String              @id @default(cuid())
+  accountName       String
   accountHolderName String
-  accountNumber   String
-  routingNumber   String?
-  ifscCode        String?
-  bankName        String
-  branchName      String?
-  accountType     String
-  isDefault       Boolean     @default(false)
-  userId          String
-  user            User        @relation(fields: [userId], references: [id])
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  accountNumber     String
+  routingNumber     String?
+  ifscCode          String?
+  bankName          String
+  branchName        String?
+  accountType       String
+  isDefault         Boolean             @default(false)
+  userId            String
+  user              User                @relation(fields: [userId], references: [id])
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  WalletTransaction WalletTransaction[]
 
   @@index([userId])
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String    @unique
-  password      String
-  firstName     String
-  lastName      String
-  emailVerified Boolean   @default(false)
-  verifyToken   String?   @unique
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  username           String              @unique
+  password           String
+  firstName          String
+  lastName           String
+  emailVerified      Boolean             @default(false)
+  verifyToken        String?             @unique
   verifyTokenExpires DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-} 
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  accounts           Account[]
+  wallet             Wallet?
+  transactions       WalletTransaction[]
+}
+
+model Wallet {
+  id           String              @id @default(cuid())
+  userId       String              @unique
+  user         User                @relation(fields: [userId], references: [id])
+  balance      Float               @default(0)
+  currency     String              @default("USD")
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  transactions WalletTransaction[]
+
+  @@index([userId])
+}
+
+model WalletTransaction {
+  id            String   @id @default(cuid())
+  walletId      String
+  wallet        Wallet   @relation(fields: [walletId], references: [id])
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  amount        Float
+  currency      String
+  type          String   // DEPOSIT, WITHDRAWAL
+  status        String   // PENDING, COMPLETED, FAILED
+  description   String?
+  fee           Float    @default(0)
+  bankAccountId String?
+  bankAccount   Account? @relation(fields: [bankAccountId], references: [id])
+  date          DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([bankAccountId])
+}

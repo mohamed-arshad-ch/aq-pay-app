@@ -10,6 +10,7 @@ import {
   setAccountFilter,
   setDateRangeFilter,
 } from "@/store/slices/transactionsSlice";
+import { getWalletTransactions } from "@/store/slices/walletSlice";
 import { fetchAccounts } from "@/store/slices/accountsSlice";
 import {
   Search,
@@ -45,6 +46,9 @@ import {
   TransactionType,
   Transaction,
   BankAccount,
+  WalletTransaction,
+  WalletTransactionType,
+  WalletTransactionStatus,
 } from "@/types";
 import { format } from "date-fns";
 
@@ -53,14 +57,20 @@ export function TransactionHistory() {
   const dispatch = useAppDispatch();
   const { transactions, filteredTransactions, filter, isLoading, error } =
     useAppSelector((state) => state.transactions);
+  const {
+    transactions: walletTransactions,
+    pendingTransactions: pendingWalletTransactions,
+    isLoading: walletLoading,
+  } = useAppSelector((state) => state.wallet);
   const { accounts } = useAppSelector((state) => state.accounts);
   const [searchTerm, setSearchTerm] = useState("");
   const [displayedTransactions, setDisplayedTransactions] = useState<
-    Transaction[]
+    (Transaction | WalletTransaction)[]
   >([]);
 
   useEffect(() => {
     dispatch(fetchTransactions());
+    dispatch(getWalletTransactions());
     dispatch(fetchAccounts());
   }, [dispatch]);
 
@@ -75,38 +85,87 @@ export function TransactionHistory() {
   }, [error]);
 
   useEffect(() => {
-    // Filter transactions based on search term
-    const transactionsToFilter = filteredTransactions || [];
+    // Combine and filter transactions
+    const seenIds = new Set<string>();
+    const transactionsToFilter: (Transaction | WalletTransaction)[] = [];
+
+    // Helper function to add transaction if not seen before
+    const addIfUnique = (
+      tx: Transaction | WalletTransaction | null | undefined,
+      prefix: string
+    ) => {
+      if (!tx) return;
+      const key = `${prefix}-${tx.id}`;
+      if (!seenIds.has(key)) {
+        seenIds.add(key);
+        transactionsToFilter.push(tx);
+      }
+    };
+
+    // Add regular transactions
+    filteredTransactions?.forEach((tx: Transaction | null) => {
+      addIfUnique(tx, "bank");
+    });
+
+    // Add wallet transactions
+    walletTransactions?.forEach((tx: WalletTransaction | null) => {
+      addIfUnique(tx, "wallet");
+    });
+
+    // Add pending wallet transactions
+    pendingWalletTransactions?.forEach((tx: WalletTransaction | null) => {
+      addIfUnique(tx, "wallet");
+    });
+
+    // Sort by date in descending order (most recent first)
+    transactionsToFilter.sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return dateB - dateA;
+    });
+
     if (searchTerm.trim() === "") {
       setDisplayedTransactions(transactionsToFilter);
     } else {
       const term = searchTerm.toLowerCase();
       setDisplayedTransactions(
-        transactionsToFilter.filter((tx: Transaction) => {
+        transactionsToFilter.filter((tx) => {
           if (!tx) return false;
+
+          const isWalletTx = "walletId" in tx;
 
           return (
             (tx.description && tx.description.toLowerCase().includes(term)) ||
             (tx.id && tx.id.toLowerCase().includes(term)) ||
-            (tx.fromAccountName &&
-              tx.fromAccountName.toLowerCase().includes(term)) ||
-            (tx.toAccountName && tx.toAccountName.toLowerCase().includes(term))
+            (!isWalletTx &&
+              ((tx.fromAccountName &&
+                tx.fromAccountName.toLowerCase().includes(term)) ||
+                (tx.toAccountName &&
+                  tx.toAccountName.toLowerCase().includes(term))))
           );
         })
       );
     }
-  }, [filteredTransactions, searchTerm]);
+  }, [
+    filteredTransactions,
+    walletTransactions,
+    pendingWalletTransactions,
+    searchTerm,
+  ]);
 
   const handleRefresh = async () => {
-    try {
-      await dispatch(fetchTransactions()).unwrap();
-    } catch (error) {
-      // Error is already handled in the error useEffect
-    }
+    await Promise.all([
+      dispatch(fetchTransactions()),
+      dispatch(getWalletTransactions()),
+    ]);
   };
 
-  const handleViewDetails = (id: string) => {
-    router.push(`/dashboard/transactions/${id}`);
+  const handleViewDetails = (id: string, isWalletTransaction: boolean) => {
+    if (isWalletTransaction) {
+      router.push(`/dashboard/wallet/transactions/${id}`);
+    } else {
+      router.push(`/dashboard/transactions/${id}`);
+    }
   };
 
   const handleClearFilters = () => {
@@ -144,11 +203,14 @@ export function TransactionHistory() {
     }
   };
 
-  const getStatusBadge = (status: TransactionStatus | undefined) => {
+  const getStatusBadge = (
+    status: TransactionStatus | WalletTransactionStatus
+  ) => {
     if (!status) return <Badge variant="outline">Unknown</Badge>;
 
     switch (status) {
       case TransactionStatus.COMPLETED:
+      case WalletTransactionStatus.COMPLETED:
         return (
           <Badge
             variant="outline"
@@ -158,6 +220,7 @@ export function TransactionHistory() {
           </Badge>
         );
       case TransactionStatus.PENDING:
+      case WalletTransactionStatus.PENDING:
         return (
           <Badge
             variant="outline"
@@ -167,6 +230,7 @@ export function TransactionHistory() {
           </Badge>
         );
       case TransactionStatus.REJECTED:
+      case WalletTransactionStatus.FAILED:
         return (
           <Badge
             variant="outline"
@@ -189,11 +253,14 @@ export function TransactionHistory() {
     }
   };
 
-  if (isLoading && (!transactions || transactions.length === 0)) {
+  if (isLoading || walletLoading) {
     return <TransactionHistorySkeleton />;
   }
 
-  if (!transactions || transactions.length === 0) {
+  if (
+    (!transactions || transactions.length === 0) &&
+    (!walletTransactions || walletTransactions.length === 0)
+  ) {
     return (
       <div className="container px-4 py-6 pb-20">
         <h1 className="text-2xl font-bold tracking-tight mb-6">Transactions</h1>
@@ -208,28 +275,30 @@ export function TransactionHistory() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="container px-4 py-6 pb-20">
-        <h1 className="text-2xl font-bold tracking-tight mb-6">Transactions</h1>
+      <div className="container px-2 sm:px-4 py-4 sm:py-6 pb-16 sm:pb-20">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-4 sm:mb-6">
+          Transactions
+        </h1>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search transactions..."
-              className="pl-9"
+              className="pl-9 h-9 sm:h-10 text-sm sm:text-base"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <Card>
-            <CardHeader className="p-4 border-b">
+            <CardHeader className="p-3 sm:p-4 border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Filters</CardTitle>
+                <CardTitle className="text-sm sm:text-base">Filters</CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 gap-1 text-xs"
+                  className="h-7 sm:h-8 gap-1 text-xs"
                   onClick={handleClearFilters}
                 >
                   <FilterX className="h-3.5 w-3.5" />
@@ -237,7 +306,7 @@ export function TransactionHistory() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-4 grid grid-cols-3 gap-4">
+            <CardContent className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Status</p>
                 <Select
@@ -248,7 +317,7 @@ export function TransactionHistory() {
                     )
                   }
                 >
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-8 text-xs sm:text-sm">
                     <SelectValue placeholder="All" />
                   </SelectTrigger>
                   <SelectContent>
@@ -260,7 +329,7 @@ export function TransactionHistory() {
                       Pending
                     </SelectItem>
                     <SelectItem value={TransactionStatus.REJECTED}>
-                      Rejected
+                      Failed
                     </SelectItem>
                     <SelectItem value={TransactionStatus.CANCELLED}>
                       Cancelled
@@ -277,12 +346,12 @@ export function TransactionHistory() {
                     dispatch(setAccountFilter(value || null))
                   }
                 >
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-8 text-xs sm:text-sm">
                     <SelectValue placeholder="All" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    {accounts.map((account: BankAccount) => (
+                    {accounts?.map((account: BankAccount) => (
                       <SelectItem key={account.id} value={account.id}>
                         {account.accountName}
                       </SelectItem>
@@ -298,7 +367,7 @@ export function TransactionHistory() {
                     <Button
                       variant="outline"
                       className={cn(
-                        "h-8 w-full justify-start text-left font-normal text-xs",
+                        "h-8 w-full justify-start text-left font-normal text-xs sm:text-sm",
                         !filter?.dateRange?.from &&
                           !filter?.dateRange?.to &&
                           "text-muted-foreground"
@@ -351,10 +420,12 @@ export function TransactionHistory() {
             </CardContent>
           </Card>
 
-          {displayedTransactions.length === 0 ? (
+          {!displayedTransactions || displayedTransactions.length === 0 ? (
             <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground">No transactions found</p>
+              <CardContent className="p-6 sm:p-8 text-center">
+                <p className="text-sm sm:text-base text-muted-foreground">
+                  No transactions found
+                </p>
                 {(filter?.status ||
                   filter?.accountId ||
                   filter?.dateRange?.from ||
@@ -363,7 +434,7 @@ export function TransactionHistory() {
                   <Button
                     variant="link"
                     onClick={handleClearFilters}
-                    className="mt-2"
+                    className="mt-2 text-sm sm:text-base"
                   >
                     Clear filters
                   </Button>
@@ -371,85 +442,114 @@ export function TransactionHistory() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {displayedTransactions.map(
-                (transaction) =>
-                  transaction && (
-                    <Card
-                      key={transaction.id}
-                      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() =>
-                        transaction.id && handleViewDetails(transaction.id)
-                      }
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "rounded-full p-2",
-                              transaction.type === TransactionType.DEPOSIT
-                                ? "bg-green-100 dark:bg-green-900"
-                                : "bg-red-100 dark:bg-red-900"
-                            )}
-                          >
-                            {transaction.type === TransactionType.DEPOSIT ? (
-                              <ArrowDownLeft
+            <div className="space-y-2 sm:space-y-3">
+              {displayedTransactions.map((transaction, index) => {
+                if (!transaction) return null;
+                const isWalletTransaction = "walletId" in transaction;
+                return (
+                  <Card
+                    key={`${isWalletTransaction ? "wallet-" : "bank-"}${
+                      transaction.id
+                    }-${index}`}
+                    className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() =>
+                      handleViewDetails(transaction.id, isWalletTransaction)
+                    }
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div
+                          className={cn(
+                            "rounded-full p-1.5 sm:p-2",
+                            (
+                              isWalletTransaction
+                                ? transaction.type ===
+                                  WalletTransactionType.DEPOSIT
+                                : transaction.type === TransactionType.DEPOSIT
+                            )
+                              ? "bg-green-100 dark:bg-green-900"
+                              : "bg-red-100 dark:bg-red-900"
+                          )}
+                        >
+                          {(
+                            isWalletTransaction
+                              ? transaction.type ===
+                                WalletTransactionType.DEPOSIT
+                              : transaction.type === TransactionType.DEPOSIT
+                          ) ? (
+                            <ArrowDownLeft
+                              className={cn(
+                                "h-3.5 w-3.5 sm:h-4 sm:w-4",
+                                "text-green-600 dark:text-green-400"
+                              )}
+                            />
+                          ) : (
+                            <ArrowUpRight
+                              className={cn(
+                                "h-3.5 w-3.5 sm:h-4 sm:w-4",
+                                "text-red-600 dark:text-red-400"
+                              )}
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                            <p className="font-medium text-sm sm:text-base truncate">
+                              {transaction.description || "Unnamed Transaction"}
+                            </p>
+                            <div className="flex items-center">
+                              <p
                                 className={cn(
-                                  "h-4 w-4",
-                                  "text-green-600 dark:text-green-400"
+                                  "font-medium text-sm sm:text-base",
+                                  (
+                                    isWalletTransaction
+                                      ? transaction.type ===
+                                        WalletTransactionType.DEPOSIT
+                                      : transaction.type ===
+                                        TransactionType.DEPOSIT
+                                  )
+                                    ? "text-green-600 dark:text-green-400"
+                                    : "text-red-600 dark:text-red-400"
                                 )}
-                              />
-                            ) : (
-                              <ArrowUpRight
-                                className={cn(
-                                  "h-4 w-4",
-                                  "text-red-600 dark:text-red-400"
+                              >
+                                {(
+                                  isWalletTransaction
+                                    ? transaction.type ===
+                                      WalletTransactionType.DEPOSIT
+                                    : transaction.type ===
+                                      TransactionType.DEPOSIT
+                                )
+                                  ? "+"
+                                  : "-"}
+                                {formatCurrency(
+                                  transaction.amount,
+                                  transaction.currency
                                 )}
-                              />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium truncate">
-                                {transaction.description ||
-                                  "Unnamed Transaction"}
                               </p>
-                              <div className="flex items-center">
-                                <p
-                                  className={cn(
-                                    "font-medium",
-                                    transaction.type === TransactionType.DEPOSIT
-                                      ? "text-green-600 dark:text-green-400"
-                                      : "text-red-600 dark:text-red-400"
-                                  )}
-                                >
-                                  {transaction.type === TransactionType.DEPOSIT
-                                    ? "+"
-                                    : "-"}
-                                  {formatCurrency(transaction.amount || 0)}
-                                </p>
-                                <ChevronRight className="h-5 w-5 text-muted-foreground ml-1" />
-                              </div>
+                              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground ml-1" />
                             </div>
-                            <div className="flex items-center justify-between mt-1">
-                              <div className="flex items-center gap-2">
-                                <p className="text-xs text-muted-foreground">
-                                  {formatDate(transaction.date || "")}
-                                </p>
-                                {getStatusBadge(transaction.status)}
-                              </div>
-                              <p className="text-xs text-muted-foreground truncate max-w-[120px]">
-                                {transaction.fromAccountName ||
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-1 gap-1 sm:gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <p className="text-xs text-muted-foreground">
+                                {formatDate(transaction.date)}
+                              </p>
+                              {getStatusBadge(transaction.status)}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                              {isWalletTransaction
+                                ? "Wallet Transaction"
+                                : transaction.fromAccountName ||
                                   transaction.toAccountName ||
                                   "Unknown Account"}
-                              </p>
-                            </div>
+                            </p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  )
-              )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

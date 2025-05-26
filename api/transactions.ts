@@ -28,7 +28,7 @@ const getAccountDetails = async (accountId: string) => {
 
 export const transactionsApi = {
   getTransactions: async (): Promise<Transaction[]> => {
-    const response = await fetch("/api/transactions");
+    const response = await fetch("/api/user/wallet/transactions");
     if (!response.ok) {
       throw new Error("Failed to fetch transactions");
     }
@@ -36,9 +36,9 @@ export const transactionsApi = {
   },
 
   getTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/transactions/${id}`);
+    const response = await fetch(`/api/user/wallet/transactions/${id}`);
     if (!response.ok) {
-      throw new Error("Transaction not found");
+      throw new Error("Failed to fetch transaction");
     }
     return response.json();
   },
@@ -46,7 +46,7 @@ export const transactionsApi = {
   createTransaction: async (
     transactionData: Partial<Transaction>
   ): Promise<Transaction> => {
-    const response = await fetch("/api/transactions", {
+    const response = await fetch("/api/user/transactions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -60,7 +60,7 @@ export const transactionsApi = {
   },
 
   approveTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/transactions/${id}/approve`, {
+    const response = await fetch(`/api/user/transactions/${id}/approve`, {
       method: "POST",
     });
     if (!response.ok) {
@@ -73,7 +73,7 @@ export const transactionsApi = {
     id: string,
     reason: string
   ): Promise<Transaction> => {
-    const response = await fetch(`/api/transactions/${id}/reject`, {
+    const response = await fetch(`/api/user/transactions/${id}/reject`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -87,7 +87,7 @@ export const transactionsApi = {
   },
 
   cancelTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/transactions/${id}/cancel`, {
+    const response = await fetch(`/api/user/transactions/${id}/cancel`, {
       method: "POST",
     });
     if (!response.ok) {
@@ -98,7 +98,9 @@ export const transactionsApi = {
 
   getTransactionHistory: async (filters?: any): Promise<Transaction[]> => {
     const queryParams = new URLSearchParams(filters).toString();
-    const response = await fetch(`/api/transactions/history?${queryParams}`);
+    const response = await fetch(
+      `/api/user/wallet/transactions/history?${queryParams}`
+    );
     if (!response.ok) {
       throw new Error("Failed to fetch transaction history");
     }
