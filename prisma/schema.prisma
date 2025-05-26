@@ -7,6 +7,25 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model Account {
+  id              String      @id @default(cuid())
+  accountName     String
+  accountHolderName String
+  accountNumber   String
+  routingNumber   String?
+  ifscCode        String?
+  bankName        String
+  branchName      String?
+  accountType     String
+  isDefault       Boolean     @default(false)
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([userId])
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -19,4 +38,5 @@ model User {
   verifyTokenExpires DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  accounts      Account[]
 } 

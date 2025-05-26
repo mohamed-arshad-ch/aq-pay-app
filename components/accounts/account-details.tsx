@@ -8,6 +8,8 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   ExternalLink,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,16 +28,16 @@ import { AccountDetailsSkeleton } from "@/components/accounts/account-details-sk
 import { cn } from "@/lib/utils";
 import { TransactionStatus, TransactionType, BankAccount } from "@/types";
 import { formatCurrency } from "@/lib/currency-utils";
-
-// Local storage key
-const ACCOUNTS_STORAGE_KEY = "money_manager_accounts";
-
-// Helper function to get accounts from local storage
-const getStoredAccounts = (): BankAccount[] => {
-  if (typeof window === "undefined") return [];
-  const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
-};
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface AccountDetailsProps {
   id: string;
@@ -46,22 +48,32 @@ export function AccountDetails({ id }: AccountDetailsProps) {
   const [account, setAccount] = useState<BankAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]); // You can define a proper Transaction type
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    // Load account details from local storage
-    const storedAccounts = getStoredAccounts();
-    const foundAccount = storedAccounts.find((acc) => acc.id === id);
-    if (foundAccount) {
-      setAccount(foundAccount);
-    } else {
+  const fetchAccountDetails = async () => {
+    try {
+      const response = await fetch(`/api/user/accounts/${id}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch account details");
+      }
+      const data = await response.json();
+      setAccount(data);
+    } catch (error) {
+      console.error("Error fetching account details:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Account not found",
+        description: "Failed to fetch account details. Please try again.",
       });
       router.push("/dashboard/accounts");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchAccountDetails();
   }, [id, router]);
 
   const handleEdit = () => {
@@ -96,12 +108,41 @@ export function AccountDetails({ id }: AccountDetailsProps) {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`/api/user/accounts/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete account");
+      }
+
+      toast({
+        title: "Account deleted",
+        description: "Your account has been successfully deleted.",
+      });
+      router.push("/dashboard/accounts");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete account. Please try again.",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   if (isLoading || !account) {
     return <AccountDetailsSkeleton />;
   }
 
   return (
-    <div className="container px-4 py-6 pb-20">
+    <div className="container max-w-2xl mx-auto px-4 py-6 pb-20">
       <div className="flex items-center gap-2 mb-6">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
@@ -205,18 +246,22 @@ export function AccountDetails({ id }: AccountDetailsProps) {
                 Edit
               </Button>
               <Button
-                variant="outline"
+                variant="destructive"
+                onClick={() => setDeleteDialogOpen(true)}
                 className="flex-1"
-                onClick={() => {
-                  toast({
-                    title: "Feature coming soon",
-                    description:
-                      "Account statements will be available in a future update.",
-                  });
-                }}
+                disabled={isDeleting}
               >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Statement
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </>
+                )}
               </Button>
             </div>
           </CardFooter>
@@ -313,6 +358,30 @@ export function AccountDetails({ id }: AccountDetailsProps) {
           )}
         </div>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your
+              account and remove it from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

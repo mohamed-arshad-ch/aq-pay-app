@@ -130,45 +130,45 @@ export function WalletDashboard() {
   }
 
   return (
-    <div className="container px-4 py-6 space-y-6 pb-20">
-      <div className="flex items-center justify-between mb-2">
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
         <h1 className="text-2xl font-bold">My Wallet</h1>
         <Button variant="outline" size="sm" onClick={handleRefresh}>
           Refresh
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
         <Button
           onClick={() => router.push("/dashboard/wallet/deposit")}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 h-12"
         >
-          <PlusCircle className="mr-2 h-4 w-4" />
+          <PlusCircle className="mr-2 h-5 w-5" />
           Add Balance
         </Button>
         <Button
           onClick={() => router.push("/dashboard/wallet/send")}
           variant="outline"
-          className="border-primary text-primary hover:bg-primary/10"
+          className="border-primary text-primary hover:bg-primary/10 h-12"
         >
-          <SendIcon className="mr-2 h-4 w-4" />
+          <SendIcon className="mr-2 h-5 w-5" />
           Send Money
         </Button>
       </div>
 
       <Tabs
         defaultValue="overview"
-        className="w-full"
+        className="w-full max-w-4xl mx-auto"
         onValueChange={setActiveTab}
       >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="history">Transaction History</TabsTrigger>
         </TabsList>
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="mt-6">
           <WalletOverview />
         </TabsContent>
-        <TabsContent value="history">
+        <TabsContent value="history" className="mt-6">
           <WalletTransactionHistory />
         </TabsContent>
       </Tabs>

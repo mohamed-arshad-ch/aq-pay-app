@@ -39,16 +39,6 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from "uuid";
 
-// Local storage key
-const ACCOUNTS_STORAGE_KEY = "money_manager_accounts";
-
-// Helper function to get accounts from local storage
-const getStoredAccounts = (): BankAccount[] => {
-  if (typeof window === "undefined") return [];
-  const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
-};
-
 export function WalletSendForm() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -67,17 +57,30 @@ export function WalletSendForm() {
   // Check if user has sufficient balance
   const hasSufficientBalance = wallet && Number(amount) <= wallet.balance;
 
-  useEffect(() => {
-    // Load accounts from local storage when component mounts
-    const storedAccounts = getStoredAccounts();
-    setAccounts(storedAccounts);
-    setIsLoadingAccounts(false);
-
-    // Set the first account as default if available
-    if (storedAccounts.length > 0 && !bankAccountId) {
-      setBankAccountId(storedAccounts[0].id);
+  const fetchAccounts = async () => {
+    try {
+      setIsLoadingAccounts(true);
+      const response = await fetch("/api/user/accounts");
+      if (!response.ok) {
+        throw new Error("Failed to fetch accounts");
+      }
+      const data = await response.json();
+      setAccounts(data);
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch accounts. Please try again.",
+      });
+    } finally {
+      setIsLoadingAccounts(false);
     }
-  }, [bankAccountId]);
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,23 +172,25 @@ export function WalletSendForm() {
   };
 
   return (
-    <div className="container px-4 py-6 pb-20">
-      <div className="flex items-center mb-6">
+    <div className="container max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-20">
+      <div className="flex items-center gap-2 mb-6">
         <Button
           variant="ghost"
           size="sm"
-          className="mr-2 p-0 h-8 w-8"
+          className="p-0 h-8 w-8"
           onClick={() => router.push("/dashboard/wallet")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold">Send Money</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Send Money</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Send to Bank Account</CardTitle>
-          <CardDescription>
+      <Card className="w-full">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-xl sm:text-2xl">
+            Send to Bank Account
+          </CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             Transfer funds from your wallet to your bank account
           </CardDescription>
         </CardHeader>
@@ -193,7 +198,7 @@ export function WalletSendForm() {
           <form onSubmit={handleSubmit}>
             <div className="space-y-6">
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                   <Label htmlFor="amount">Amount</Label>
                   <span className="text-sm text-muted-foreground">
                     Available:{" "}
@@ -218,7 +223,7 @@ export function WalletSendForm() {
                     id="amount"
                     type="number"
                     placeholder="0.00"
-                    className="pl-8"
+                    className="pl-8 h-12 text-base"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     step="0.01"
@@ -231,7 +236,7 @@ export function WalletSendForm() {
 
                 {amount && !hasSufficientBalance && (
                   <div className="flex items-start mt-2 text-sm text-red-500">
-                    <AlertCircle className="h-4 w-4 mr-1 mt-0.5" />
+                    <AlertCircle className="h-4 w-4 mr-1 mt-0.5 flex-shrink-0" />
                     <span>Insufficient balance</span>
                   </div>
                 )}
@@ -244,7 +249,7 @@ export function WalletSendForm() {
                   onValueChange={setBankAccountId}
                   disabled={isLoadingAccounts}
                 >
-                  <SelectTrigger id="bankAccount">
+                  <SelectTrigger id="bankAccount" className="h-12 text-base">
                     <SelectValue
                       placeholder={
                         isLoadingAccounts
@@ -277,7 +282,7 @@ export function WalletSendForm() {
                 )}
                 {!isLoadingAccounts && accounts.length === 0 && (
                   <div className="flex items-start mt-2 text-sm text-amber-600">
-                    <AlertCircle className="h-4 w-4 mr-1 mt-0.5" />
+                    <AlertCircle className="h-4 w-4 mr-1 mt-0.5 flex-shrink-0" />
                     <span>
                       You need to add a bank account before you can send funds.{" "}
                       <Button
@@ -299,12 +304,13 @@ export function WalletSendForm() {
                   placeholder="Add a note for this transaction"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[100px] text-base"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-12 text-base"
                 disabled={
                   isLoading ||
                   isLoadingAccounts ||

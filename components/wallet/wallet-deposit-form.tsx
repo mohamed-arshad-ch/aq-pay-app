@@ -93,23 +93,27 @@ export function WalletDepositForm() {
   };
 
   return (
-    <div className="container px-4 py-6 pb-20">
-      <div className="flex items-center mb-6">
+    <div className="container max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-20">
+      <div className="flex items-center gap-2 mb-6">
         <Button
           variant="ghost"
           size="sm"
-          className="mr-2 p-0 h-8 w-8"
+          className="p-0 h-8 w-8"
           onClick={() => router.push("/dashboard/wallet")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold">Add Balance</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Add Balance</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Add Funds to Wallet</CardTitle>
-          <CardDescription>Instantly add money to your wallet</CardDescription>
+      <Card className="w-full">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-xl sm:text-2xl">
+            Add Funds to Wallet
+          </CardTitle>
+          <CardDescription className="text-sm sm:text-base">
+            Instantly add money to your wallet
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
@@ -132,7 +136,7 @@ export function WalletDepositForm() {
                     id="amount"
                     type="number"
                     placeholder="0.00"
-                    className="pl-8"
+                    className="pl-8 h-12 text-base"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     step="0.01"
@@ -151,10 +155,15 @@ export function WalletDepositForm() {
                   placeholder="Add a note for this deposit"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[100px] text-base"
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full h-12 text-base"
+                disabled={isLoading}
+              >
                 {isLoading ? "Processing..." : "Add Funds"}
               </Button>
             </div>

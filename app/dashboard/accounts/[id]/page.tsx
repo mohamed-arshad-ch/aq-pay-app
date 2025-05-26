@@ -1,5 +1,10 @@
-import { AccountDetails } from "@/components/accounts/account-details"
+import { AccountDetails } from "@/components/accounts/account-details";
 
-export default function AccountDetailsPage({ params }: { params: { id: string } }) {
-  return <AccountDetails id={params.id} />
+export default async function AccountDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <AccountDetails id={id} />;
 }
