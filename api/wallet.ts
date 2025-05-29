@@ -84,25 +84,17 @@ export async function fetchAllWalletTransactions(): Promise<
 // Add balance to wallet
 export async function addWalletBalance(
   amount: number,
-<<<<<<< HEAD
   description: string,
   status: string,
   location: string,
   time: string
-=======
-  description: string
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 ): Promise<{ transaction: WalletTransaction; newBalance: number }> {
   const response = await fetch("/api/user/wallet", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-<<<<<<< HEAD
     body: JSON.stringify({ amount, description, status, location, time }),
-=======
-    body: JSON.stringify({ amount, description }),
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
   });
 
   if (!response.ok) {
@@ -139,23 +131,18 @@ export async function sendWalletBalance(
 export const updateTransactionStatus = async (
   transactionId: string,
   status: WalletTransactionStatus,
-<<<<<<< HEAD
   adminNote?: string,
   updates?: {
     amount?: number;
     location?: string;
     date?: string;
   }
-=======
-  adminNote?: string
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 ): Promise<{
   transaction: WalletTransaction;
   walletUpdated?: boolean;
   newBalance?: number;
 }> => {
   try {
-<<<<<<< HEAD
     const response = await fetch(
       `/api/admin/wallet/transactions/${transactionId}`,
       {
@@ -176,74 +163,6 @@ export const updateTransactionStatus = async (
     }
 
     return response.json();
-=======
-    // In a real app, this would be an API call
-    // const response = await apiClient.post(`/admin/wallet/transactions/${transactionId}/status`, { status, adminNote })
-    // return response.data
-
-    // For development, use localStorage
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Get current wallet and transactions
-        const wallet = getWalletFromStorage();
-        const transactions = getTransactionsFromStorage();
-
-        // Find the transaction
-        const transaction = transactions.find((t) => t.id === transactionId);
-        if (!transaction) {
-          reject(new Error("Transaction not found"));
-          return;
-        }
-
-        // Update transaction status
-        const updatedTransaction = {
-          ...transaction,
-          status,
-          updatedAt: new Date().toISOString(),
-          adminNote: adminNote || transaction.adminNote,
-        };
-
-        // Replace the transaction in the array
-        const updatedTransactions = transactions.map((t) =>
-          t.id === transactionId ? updatedTransaction : t
-        );
-
-        let walletUpdated = false;
-        let newBalance = wallet.balance;
-
-        // If completing a withdrawal, update the wallet balance
-        if (
-          status === WalletTransactionStatus.COMPLETED &&
-          updatedTransaction.type === WalletTransactionType.WITHDRAWAL &&
-          transaction.status !== WalletTransactionStatus.COMPLETED
-        ) {
-          const totalAmount =
-            updatedTransaction.amount + (updatedTransaction.fee || 0);
-          newBalance = wallet.balance - totalAmount;
-
-          // Update wallet
-          const updatedWallet = {
-            ...wallet,
-            balance: newBalance,
-            updatedAt: new Date().toISOString(),
-          };
-
-          // Save updated wallet
-          saveWalletToStorage(updatedWallet);
-          walletUpdated = true;
-        }
-
-        // Save updated transactions
-        saveTransactionsToStorage(updatedTransactions);
-
-        resolve({
-          transaction: updatedTransaction,
-          walletUpdated,
-          newBalance: walletUpdated ? newBalance : undefined,
-        });
-      }, 1000);
-    });
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
   } catch (error) {
     console.error("Error updating transaction status:", error);
     throw error;

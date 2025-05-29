@@ -74,10 +74,7 @@ model WalletTransaction {
   date          DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-<<<<<<< HEAD
   location      String?
-=======
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 
   @@index([walletId])
   @@index([userId])

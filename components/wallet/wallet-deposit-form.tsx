@@ -57,11 +57,8 @@ export function WalletDepositForm() {
     defaultValues: {
       amount: "",
       description: "",
-<<<<<<< HEAD
       location: "",
       time: new Date().toISOString().slice(0, 16),
-=======
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
     },
   });
 
@@ -69,7 +66,6 @@ export function WalletDepositForm() {
     try {
       setIsSubmitting(true);
       const amount = Number(values.amount);
-<<<<<<< HEAD
 
       const dateTime = new Date(values.time);
       const isoDateTime = dateTime.toISOString();
@@ -81,12 +77,6 @@ export function WalletDepositForm() {
           status: "PENDING",
           location: values.location,
           time: isoDateTime,
-=======
-      await dispatch(
-        depositToWallet({
-          amount,
-          description: values.description,
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
         })
       ).unwrap();
 
@@ -190,7 +180,6 @@ export function WalletDepositForm() {
 
               <FormField
                 control={form.control}
-<<<<<<< HEAD
                 name="location"
                 render={({ field }) => (
                   <FormItem>
@@ -227,8 +216,6 @@ export function WalletDepositForm() {
 
               <FormField
                 control={form.control}
-=======
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
                 name="description"
                 render={({ field }) => (
                   <FormItem>
