@@ -17,6 +17,7 @@ import {
   Calendar,
   DollarSign,
   AlertCircle,
+<<<<<<< HEAD
   Pencil,
   Save,
   X,
@@ -24,6 +25,9 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+=======
+} from "lucide-react";
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 
 interface User {
   id: string;
@@ -49,7 +53,10 @@ interface Transaction {
   date: string;
   user: User;
   bankAccount: BankAccount;
+<<<<<<< HEAD
   location?: string;
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 }
 
 function TransactionDetailsSkeleton() {
@@ -112,11 +119,14 @@ export default function TransactionDetailsPage({
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+<<<<<<< HEAD
   const [isEditing, setIsEditing] = useState(false);
   const [editedAmount, setEditedAmount] = useState("");
   const [editedLocation, setEditedLocation] = useState("");
   const [editedTime, setEditedTime] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 
   useEffect(() => {
     const fetchTransaction = async () => {
@@ -127,10 +137,13 @@ export default function TransactionDetailsPage({
         }
         const data = await response.json();
         setTransaction(data);
+<<<<<<< HEAD
         // Initialize edit values
         setEditedAmount(data.amount.toString());
         setEditedLocation(data.location || "");
         setEditedTime(data.date);
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -193,6 +206,7 @@ export default function TransactionDetailsPage({
     }
   };
 
+<<<<<<< HEAD
   const handleEdit = async () => {
     if (!transaction) return;
   
@@ -235,6 +249,8 @@ export default function TransactionDetailsPage({
   };
   
 
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
   if (isLoading) {
     return <TransactionDetailsSkeleton />;
   }
@@ -276,6 +292,7 @@ export default function TransactionDetailsPage({
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Transaction Details</h1>
+<<<<<<< HEAD
         <div className="flex gap-2">
           {transaction?.status === "PENDING" &&
             transaction?.type === "DEPOSIT" && (
@@ -316,6 +333,11 @@ export default function TransactionDetailsPage({
             Back to Transactions
           </Button>
         </div>
+=======
+        <Button variant="outline" onClick={() => window.history.back()}>
+          Back to Transactions
+        </Button>
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
       </div>
 
       <div className="grid gap-6">
@@ -326,6 +348,7 @@ export default function TransactionDetailsPage({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Transaction ID</p>
+<<<<<<< HEAD
               <p className="font-medium">{transaction?.id}</p>
             </div>
             <div>
@@ -344,15 +367,29 @@ export default function TransactionDetailsPage({
                   {formatCurrency(transaction?.amount)}
                 </p>
               )}
+=======
+              <p className="font-medium">{transaction.id}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Amount</p>
+              <p className="font-medium">
+                {formatCurrency(transaction.amount)}
+              </p>
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
             </div>
             <div>
               <p className="text-sm text-gray-500">Type</p>
               <p className="font-medium capitalize">
+<<<<<<< HEAD
                 {transaction?.type.toLowerCase()}
+=======
+                {transaction.type.toLowerCase()}
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Status</p>
+<<<<<<< HEAD
               <div className="mt-1">{getStatusBadge(transaction?.status)}</div>
             </div>
             <div>
@@ -384,6 +421,19 @@ export default function TransactionDetailsPage({
               ) : (
                 <p className="font-medium">{transaction?.location || "N/A"}</p>
               )}
+=======
+              <div className="mt-1">{getStatusBadge(transaction.status)}</div>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Date</p>
+              <p className="font-medium">
+                {format(new Date(transaction.date), "PPP p")}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Description</p>
+              <p className="font-medium">{transaction.description}</p>
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
             </div>
           </div>
         </Card>
@@ -394,12 +444,20 @@ export default function TransactionDetailsPage({
             <div>
               <p className="text-sm text-gray-500">Name</p>
               <p className="font-medium">
+<<<<<<< HEAD
                 {transaction.user?.firstName} {transaction.user?.lastName}
+=======
+                {transaction.user.firstName} {transaction.user.lastName}
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Email</p>
+<<<<<<< HEAD
               <p className="font-medium">{transaction.user?.email}</p>
+=======
+              <p className="font-medium">{transaction.user.email}</p>
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
             </div>
           </div>
         </Card>
@@ -412,23 +470,39 @@ export default function TransactionDetailsPage({
             <div>
               <p className="text-sm text-gray-500">Account Name</p>
               <p className="font-medium">
+<<<<<<< HEAD
                 {transaction.bankAccount?.accountName}
+=======
+                {transaction.bankAccount.accountName}
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Account Number</p>
               <p className="font-medium">
+<<<<<<< HEAD
                 {transaction.bankAccount?.accountNumber}
+=======
+                {transaction.bankAccount.accountNumber}
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Bank Name</p>
+<<<<<<< HEAD
               <p className="font-medium">{transaction.bankAccount?.bankName}</p>
+=======
+              <p className="font-medium">{transaction.bankAccount.bankName}</p>
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
             </div>
           </div>
         </Card>
 
+<<<<<<< HEAD
         {transaction?.status === "PENDING" && !isEditing && (
+=======
+        {transaction.status === "PENDING" && (
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
           <div className="flex gap-4 justify-end">
             <Button variant="destructive" onClick={handleReject}>
               Reject Transaction

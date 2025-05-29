@@ -70,6 +70,7 @@ export const getWalletTransactions = createAsyncThunk(
 export const depositToWallet = createAsyncThunk(
   "wallet/depositToWallet",
   async (
+<<<<<<< HEAD
     {
       amount,
       description,
@@ -93,6 +94,13 @@ export const depositToWallet = createAsyncThunk(
         location,
         time
       );
+=======
+    { amount, description }: { amount: number; description: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      return await addWalletBalance(amount, description);
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to add balance"

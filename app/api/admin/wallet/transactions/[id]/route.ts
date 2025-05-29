@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
+<<<<<<< HEAD
 import { WalletTransactionStatus } from "@/types";
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 
 export async function GET(
   request: Request,
@@ -21,8 +24,11 @@ export async function GET(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
+<<<<<<< HEAD
     const id = await params.id;
 
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
     const transaction = await prisma.$queryRaw`
       SELECT 
         wt.*,
@@ -41,6 +47,7 @@ export async function GET(
       FROM "WalletTransaction" wt
       LEFT JOIN "User" u ON wt."userId" = u.id
       LEFT JOIN "Account" ba ON wt."bankAccountId" = ba.id
+<<<<<<< HEAD
       WHERE wt.id = ${id}
     `;
 
@@ -49,6 +56,12 @@ export async function GET(
       !Array.isArray(transaction) ||
       transaction.length === 0
     ) {
+=======
+      WHERE wt.id = ${params.id}
+    `;
+
+    if (!transaction || !transaction[0]) {
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
       return NextResponse.json(
         { error: "Transaction not found" },
         { status: 404 }
@@ -82,6 +95,7 @@ export async function POST(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
+<<<<<<< HEAD
     const id = await params.id;
     const body = await request.json();
     const { status, amount, location, date } = body;
@@ -154,5 +168,64 @@ export async function POST(
   } catch (error) {
     console.error("Error updating transaction:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
+=======
+    const { status } = await request.json();
+
+    // Start a transaction to ensure data consistency
+    const result = await prisma.$transaction(async (tx) => {
+      // Get the transaction and wallet
+      const transaction = await tx.walletTransaction.findUnique({
+        where: { id: params.id },
+        include: { wallet: true },
+      });
+
+      if (!transaction) {
+        throw new Error("Transaction not found");
+      }
+
+      if (transaction.status !== "PENDING") {
+        throw new Error("Transaction is not pending");
+      }
+
+      // Update transaction status
+      const updatedTransaction = await tx.walletTransaction.update({
+        where: { id: params.id },
+        data: { status },
+        include: {
+          user: true,
+          bankAccount: true,
+        },
+      });
+
+      // If the transaction is approved and it's a SEND type, deduct from wallet balance
+      if (status === "COMPLETED" && transaction.type === "SEND") {
+        const wallet = await tx.wallet.update({
+          where: { id: transaction.walletId },
+          data: {
+            balance: {
+              decrement: transaction.amount,
+            },
+          },
+        });
+
+        return {
+          ...updatedTransaction,
+          wallet,
+        };
+      }
+
+      return updatedTransaction;
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Error updating transaction:", error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
   }
 }

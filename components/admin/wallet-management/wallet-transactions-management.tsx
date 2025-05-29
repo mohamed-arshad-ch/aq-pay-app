@@ -61,7 +61,10 @@ import {
   Copy,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+<<<<<<< HEAD
 import { Input } from "@/components/ui/input";
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 
 export function WalletTransactionsManagement() {
   const dispatch = useAppDispatch();
@@ -76,10 +79,13 @@ export function WalletTransactionsManagement() {
   const [adminNote, setAdminNote] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
+<<<<<<< HEAD
   const [isEditing, setIsEditing] = useState(false);
   const [editedAmount, setEditedAmount] = useState("");
   const [editedLocation, setEditedLocation] = useState("");
   const [editedTime, setEditedTime] = useState("");
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 
   const fetchTransactions = async () => {
     setIsLoading(true);
@@ -109,18 +115,23 @@ export function WalletTransactionsManagement() {
       const result = await apiUpdateTransactionStatus(
         selectedTransaction.id,
         newStatus,
+<<<<<<< HEAD
         adminNote,
         {
           amount: parseFloat(editedAmount),
           location: editedLocation,
           date: editedTime,
         }
+=======
+        adminNote
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
       );
 
       // Update the transaction in the local state
       setTransactions((prev) =>
         prev.map((tx) =>
           tx.id === selectedTransaction.id
+<<<<<<< HEAD
             ? {
                 ...tx,
                 status: newStatus,
@@ -129,6 +140,9 @@ export function WalletTransactionsManagement() {
                 location: editedLocation,
                 date: editedTime,
               }
+=======
+            ? { ...tx, status: newStatus, adminNote }
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
             : tx
         )
       );
@@ -196,9 +210,12 @@ export function WalletTransactionsManagement() {
     }
     setSelectedTransaction(transaction);
     setNewStatus(transaction.status);
+<<<<<<< HEAD
     setEditedAmount(transaction.amount.toString());
     setEditedLocation(transaction.location || "");
     setEditedTime(transaction.date);
+=======
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
     setIsDialogOpen(true);
   };
 
@@ -405,8 +422,13 @@ export function WalletTransactionsManagement() {
           <DialogHeader>
             <DialogTitle>Update Transaction Status</DialogTitle>
             <DialogDescription>
+<<<<<<< HEAD
               Review and update the transaction details before approving or
               rejecting.
+=======
+              Change the status of this send request and provide an optional
+              note.
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
             </DialogDescription>
           </DialogHeader>
 
@@ -418,6 +440,7 @@ export function WalletTransactionsManagement() {
                   <p className="font-medium">{selectedTransaction.reference}</p>
                 </div>
                 <div>
+<<<<<<< HEAD
                   <p className="text-muted-foreground">User ID</p>
                   <p className="font-medium">{selectedTransaction.userId}</p>
                 </div>
@@ -492,26 +515,102 @@ export function WalletTransactionsManagement() {
                     onChange={(e) => setAdminNote(e.target.value)}
                   />
                 </div>
+=======
+                  <p className="text-muted-foreground">Amount</p>
+                  <p className="font-medium">
+                    {formatCurrency(
+                      selectedTransaction.amount,
+                      selectedTransaction.currency
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">User ID</p>
+                  <p className="font-medium">{selectedTransaction.userId}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Date</p>
+                  <p className="font-medium">
+                    {new Date(selectedTransaction.date).toLocaleString()}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-muted-foreground">Description</p>
+                  <p className="font-medium">
+                    {selectedTransaction.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={newStatus}
+                  onValueChange={(value) =>
+                    setNewStatus(value as WalletTransactionStatus)
+                  }
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={WalletTransactionStatus.COMPLETED}>
+                      <div className="flex items-center">
+                        <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                        Approve
+                      </div>
+                    </SelectItem>
+                    <SelectItem value={WalletTransactionStatus.FAILED}>
+                      <div className="flex items-center">
+                        <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                        Reject
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="adminNote">Admin Note (Optional)</Label>
+                <Textarea
+                  id="adminNote"
+                  placeholder="Add a note about this decision"
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                />
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
               </div>
             </div>
           )}
 
           <DialogFooter>
+<<<<<<< HEAD
             <Button
               variant="outline"
               onClick={() => setIsDialogOpen(false)}
               disabled={isUpdating}
             >
+=======
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
               Cancel
             </Button>
             <Button onClick={handleStatusChange} disabled={isUpdating}>
               {isUpdating ? (
                 <>
+<<<<<<< HEAD
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Updating...
                 </>
               ) : (
                 "Update Transaction"
+=======
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Updating...
+                </>
+              ) : (
+                "Update Status"
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
               )}
             </Button>
           </DialogFooter>

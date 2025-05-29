@@ -70,8 +70,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
+<<<<<<< HEAD
     const { amount, description, status, location, time } =
       await request.json();
+=======
+    const { amount, description } = await request.json();
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 
     if (!amount || isNaN(amount) || amount <= 0) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
@@ -101,10 +105,15 @@ export async function POST(request: Request) {
           amount,
           currency: wallet.currency,
           type: "DEPOSIT",
+<<<<<<< HEAD
           status: status || "PENDING",
           description: description || "Wallet deposit",
           date: time || new Date().toISOString(),
           location: location || undefined,
+=======
+          status: "COMPLETED",
+          description: description || "Wallet deposit",
+>>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
         },
       }),
       prisma.wallet.update({
