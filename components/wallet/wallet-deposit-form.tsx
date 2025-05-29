@@ -37,11 +37,8 @@ const formSchema = z.object({
       message: "Amount must be a positive number",
     }),
   description: z.string().optional(),
-<<<<<<< HEAD
   location: z.string().min(1, "Location is required"),
   time: z.string().min(1, "Time is required"),
-=======
->>>>>>> 9d8d36d4c07b30a25b6e973f0c6d0ee89d3c2521
 });
 
 type FormValues = z.infer<typeof formSchema>;
