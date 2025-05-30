@@ -163,44 +163,54 @@ export default function TransactionDetailsPage({
   const [isRejecting, setIsRejecting] = useState(false);
 
   useEffect(() => {
-    const fetchTransaction = async () => {
-      try {
-        const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        if (!response.ok) {
-          throw new Error("Failed to fetch transaction");
-        }
-        const data = await response.json();
-        setTransaction(data);
+   const fetchTransaction = async () => {
+  try {
+    console.log('Fetching transaction with ID:', id);
+    
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error response:', errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('Transaction data received:', data);
+    setTransaction(data);
 
-        // Initialize edit values
-        setEditedAmount(data.amount.toString());
-        setEditedLocation(data.location || "");
+    // Initialize edit values
+    setEditedAmount(data.amount.toString());
+    setEditedLocation(data.location || "");
 
-        // Format the date for datetime-local input
-        try {
-          const date = new Date(data.date);
-          if (!isNaN(date.getTime())) {
-            // Format date to YYYY-MM-DDThh:mm
-            const formattedDate = date.toISOString().slice(0, 16);
-            setEditedTime(formattedDate);
-          } else {
-            setEditedTime("");
-          }
-        } catch (error) {
-          console.error("Error formatting initial date:", error);
-          setEditedTime("");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setIsLoading(false);
+    // Format the date for datetime-local input
+    try {
+      const date = new Date(data.date);
+      if (!isNaN(date.getTime())) {
+        const formattedDate = date.toISOString().slice(0, 16);
+        setEditedTime(formattedDate);
+      } else {
+        setEditedTime("");
       }
-    };
+    } catch (error) {
+      console.error("Error formatting initial date:", error);
+      setEditedTime("");
+    }
+  } catch (err) {
+    console.error('Fetch error:', err);
+    setError(err instanceof Error ? err.message : "An error occurred");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
     fetchTransaction();
   }, [id]);

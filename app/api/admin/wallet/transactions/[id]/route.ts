@@ -4,24 +4,44 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { WalletTransactionStatus } from "@/types";
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('API Route called with ID:', params.id);
+    
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token");
 
     if (!token?.value) {
+      console.log('No auth token found');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userData = await verifyToken(token.value);
     if (!userData) {
+      console.log('Invalid token');
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const id = await params.id;
+    const id = params.id;
+    console.log('Fetching transaction with ID:', id);
+
+    // Test database connection first
+    try {
+      await prisma.$connect();
+      console.log('Database connected successfully');
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      return NextResponse.json(
+        { error: "Database connection failed" },
+        { status: 500 }
+      );
+    }
 
     const transaction = await prisma.$queryRaw`
       SELECT 
@@ -44,6 +64,8 @@ export async function GET(
       WHERE wt.id = ${id}
     `;
 
+    console.log('Query result:', transaction);
+
     if (
       !transaction ||
       !Array.isArray(transaction) ||
@@ -59,9 +81,14 @@ export async function GET(
   } catch (error) {
     console.error("Error fetching transaction:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
