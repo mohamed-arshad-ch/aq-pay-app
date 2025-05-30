@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getWalletTransactions } from "@/store/slices/walletSlice";
 import { TransactionTable } from "@/components/admin/transaction-management/transaction-table";
@@ -23,9 +23,11 @@ import { fetchAllWalletTransactions } from "@/api/wallet";
 export default function AdminTransactionsPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const searchParams = useSearchParams();
   const { transactions, isLoading } = useAppSelector((state) => state.wallet);
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const defaultTab = searchParams.get("status")?.toLowerCase() || "all";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,6 +78,15 @@ export default function AdminTransactionsPage() {
       return matchesSearch;
     }
   );
+
+  const handleTabChange = (value: string) => {
+    const status = value.toUpperCase();
+    if (value === "all") {
+      router.push("/admin/transactions");
+    } else {
+      router.push(`/admin/transactions?status=${status}`);
+    }
+  };
 
   const pendingTransactions = filteredTransactions.filter(
     (t: Transaction) => t.status === "PENDING"
@@ -193,24 +204,46 @@ export default function AdminTransactionsPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs
+        defaultValue={defaultTab}
+        className="space-y-4"
+        onValueChange={handleTabChange}
+      >
+        {" "}
         <div className="overflow-x-auto">
           <TabsList className="inline-flex min-w-full sm:min-w-0">
-            <TabsTrigger value="all" className="text-xs sm:text-sm">
+            <TabsTrigger
+              value="all"
+              className="text-xs sm:text-sm"
+              onClick={() => router.push("/admin/transactions")}
+            >
               All
             </TabsTrigger>
-            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+            <TabsTrigger
+              value="pending"
+              className="text-xs sm:text-sm"
+              onClick={() => router.push("/admin/transactions?status=PENDING")}
+            >
               Pending
             </TabsTrigger>
-            <TabsTrigger value="rejected" className="text-xs sm:text-sm">
+            <TabsTrigger
+              value="rejected"
+              className="text-xs sm:text-sm"
+              onClick={() => router.push("/admin/transactions?status=REJECTED")}
+            >
               Rejected
             </TabsTrigger>
-            <TabsTrigger value="completed" className="text-xs sm:text-sm">
+            <TabsTrigger
+              value="completed"
+              className="text-xs sm:text-sm"
+              onClick={() =>
+                router.push("/admin/transactions?status=COMPLETED")
+              }
+            >
               Completed
             </TabsTrigger>
           </TabsList>
         </div>
-
         {/* Tab Content */}
         <TabsContent value="all" className="mt-0 sm:mt-2">
           {filteredTransactions.length === 0 && !isLoading ? (
