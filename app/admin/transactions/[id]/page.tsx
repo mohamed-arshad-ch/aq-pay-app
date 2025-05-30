@@ -165,7 +165,12 @@ export default function TransactionDetailsPage({
   useEffect(() => {
     const fetchTransaction = async () => {
       try {
-        const response = await fetch(`/api/admin/wallet/transactions/${id}`);
+        const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch transaction");
         }
