@@ -1,6 +1,6 @@
 import type React from "react";
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
+import { AdminBottomNav } from "@/components/admin/admin-bottom-nav";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyToken } from "@/lib/jwt";
@@ -28,13 +28,12 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16">
       <AdminHeader />
-      <AdminSidebar />
-      <main className="pt-16 md:pt-0 md:ml-64">
-        <div className="container mx-auto p-4 md:p-6">{children}</div>
+      <main className="pt-16">
+        <div className="container mx-auto p-4">{children}</div>
       </main>
-      {/* <AdminBottomNav /> */}
+      <AdminBottomNav />
     </div>
   );
 }

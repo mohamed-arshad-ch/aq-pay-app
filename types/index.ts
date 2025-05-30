@@ -262,7 +262,7 @@ export enum WalletTransactionStatus {
   PENDING = "PENDING",
   COMPLETED = "COMPLETED",
   FAILED = "FAILED",
-  CANCELLED = "CANCELLED",
+  CANCELLED = "REJECTED",
 }
 
 export enum PaymentMethod {

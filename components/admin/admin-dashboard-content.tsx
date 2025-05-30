@@ -34,33 +34,37 @@ export function AdminDashboardContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header Section */}
+      <div className="space-y-1 sm:space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Admin Dashboard
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Overview of system performance and recent activities.
         </p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Key Metrics - First Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Pending Transactions Card */}
         <Card className="border-l-4 border-l-yellow-400">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 sm:pb-2">
+            <CardTitle className="text-sm sm:text-base font-medium">
               Pending Transactions
             </CardTitle>
             <div className="flex items-center space-x-1">
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">--</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold">--</div>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Awaiting review or approval
             </p>
             <Button
               variant="link"
-              className="px-0 text-xs text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
+              className="px-0 text-xs sm:text-sm text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
               onClick={() => router.push("/admin/transactions?status=PENDING")}
             >
               View all pending
@@ -133,7 +137,8 @@ export function AdminDashboardContent() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Statistics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -182,14 +187,17 @@ export function AdminDashboardContent() {
         </Card>
       </div>
 
+      {/* Recent Transactions Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-lg sm:text-xl">
+            Recent Transactions
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-8">
-            <div className="flex items-center justify-center h-32">
-              <p className="text-muted-foreground">
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <div className="space-y-6 sm:space-y-8">
+            <div className="flex items-center justify-center h-24 sm:h-32">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 No recent transactions available
               </p>
             </div>
@@ -197,6 +205,7 @@ export function AdminDashboardContent() {
           <div className="mt-4 text-center">
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => router.push("/admin/transactions")}
             >
               View All Transactions
@@ -205,26 +214,40 @@ export function AdminDashboardContent() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="users">Recent Users</TabsTrigger>
-          <TabsTrigger value="transactions">Recent Transactions</TabsTrigger>
-          <TabsTrigger value="activity">Activity Log</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview" className="space-y-4">
-          <AdminStatsOverview isLoading={isLoading} />
-        </TabsContent>
-        <TabsContent value="users" className="space-y-4">
-          <AdminRecentUsers isLoading={isLoading} />
-        </TabsContent>
-        <TabsContent value="transactions" className="space-y-4">
-          <AdminRecentTransactions isLoading={isLoading} />
-        </TabsContent>
-        <TabsContent value="activity" className="space-y-4">
-          <AdminActivityLog isLoading={isLoading} />
-        </TabsContent>
-      </Tabs>
+      {/* Tabs Section */}
+      <div className="mt-6">
+        <Tabs defaultValue="overview" className="space-y-4">
+          <div className="overflow-x-auto">
+            <TabsList className="inline-flex w-full sm:w-auto">
+              <TabsTrigger value="overview" className="text-xs sm:text-sm">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="users" className="text-xs sm:text-sm">
+                Recent Users
+              </TabsTrigger>
+              <TabsTrigger value="transactions" className="text-xs sm:text-sm">
+                Recent Transactions
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="text-xs sm:text-sm">
+                Activity Log
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="overview" className="space-y-4">
+            <AdminStatsOverview isLoading={isLoading} />
+          </TabsContent>
+          <TabsContent value="users" className="space-y-4">
+            <AdminRecentUsers isLoading={isLoading} />
+          </TabsContent>
+          <TabsContent value="transactions" className="space-y-4">
+            <AdminRecentTransactions isLoading={isLoading} />
+          </TabsContent>
+          <TabsContent value="activity" className="space-y-4">
+            <AdminActivityLog isLoading={isLoading} />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

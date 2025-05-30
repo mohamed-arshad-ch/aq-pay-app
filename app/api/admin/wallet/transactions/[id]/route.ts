@@ -82,13 +82,18 @@ export async function POST(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const id = await params.id;
+    const id = params.id;
     const body = await request.json();
-    const { status, amount, location, date } = body;
+    const { status } = body;
 
     // Validate status
-    if (!Object.values(WalletTransactionStatus).includes(status)) {
-      return new NextResponse("Invalid status", { status: 400 });
+    if (!status || !Object.values(WalletTransactionStatus).includes(status)) {
+      return NextResponse.json(
+        {
+          error: "Invalid status. Must be one of: PENDING, COMPLETED, REJECTED",
+        },
+        { status: 400 }
+      );
     }
 
     // Get the current transaction
@@ -98,61 +103,35 @@ export async function POST(
     });
 
     if (!currentTransaction) {
-      return new NextResponse("Transaction not found", { status: 404 });
-    }
-
-    // Prepare update data
-    const updateData: any = {
-      status,
-      updatedAt: new Date(),
-    };
-
-    // Add optional fields if provided
-    if (amount !== undefined) {
-      updateData.amount = parseFloat(amount);
-    }
-    if (location !== undefined) {
-      updateData.location = location;
-    }
-    if (date !== undefined) {
-      updateData.date = new Date(date);
+      return NextResponse.json(
+        { error: "Transaction not found" },
+        { status: 404 }
+      );
     }
 
     // Update the transaction
     const updatedTransaction = await prisma.walletTransaction.update({
       where: { id },
-      data: updateData,
+      data: {
+        status,
+        updatedAt: new Date(),
+      },
       include: {
         wallet: true,
+        user: true,
+        bankAccount: true,
       },
     });
 
-    // If the transaction is being marked as completed, update the wallet balance
-    if (
-      status === WalletTransactionStatus.COMPLETED &&
-      currentTransaction.status !== WalletTransactionStatus.COMPLETED
-    ) {
-      const totalAmount =
-        updatedTransaction.amount + (updatedTransaction.fee || 0);
-
-      // Update wallet balance
-      await prisma.wallet.update({
-        where: { id: currentTransaction.walletId },
-        data: {
-          balance: {
-            increment: totalAmount,
-          },
-          updatedAt: new Date(),
-        },
-      });
-    }
-
     return NextResponse.json({
       transaction: updatedTransaction,
-      walletUpdated: status === WalletTransactionStatus.COMPLETED,
+      message: `Transaction ${status.toLowerCase()} successfully`,
     });
   } catch (error) {
     console.error("Error updating transaction:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -67,59 +67,71 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
   };
 
   return (
-    <div
-      className={cn(
-        "relative rounded-xl overflow-hidden shadow-lg transition-all hover:shadow-xl",
-        getCardGradient(account.bankName),
-        onClick && "cursor-pointer"
-      )}
-      onClick={onClick}
-    >
-      <div className="p-6 text-white">
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-sm opacity-80">{account.bankName}</p>
-            <h3 className="font-bold text-lg mt-1">{account.accountName}</h3>
-          </div>
-          <div onClick={handleShareClick}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
-                  <Share2 className="h-4 w-4 text-white" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleShare("Email")}>
-                  Email
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare("SMS")}>
-                  SMS
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare("Copy Link")}>
-                  Copy Link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+    <div className="p-[1px] rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300">
+      <div
+        className={cn(
+          "relative rounded-xl overflow-hidden shadow-lg transition-all hover:shadow-xl",
+          getCardGradient(account.bankName),
+          onClick && "cursor-pointer"
+        )}
+        onClick={onClick}
+      >
+        {/* Inner glow effect */}
+        <div className="absolute inset-0 opacity-30 bg-gradient-to-br from-white/20 to-transparent" />
 
-        <div className="mt-6">
-          <p className="text-sm opacity-80">Card Number</p>
-          <p className="font-mono text-lg tracking-wider">
-            {formatAccountNumber(account.accountNumber)}
-          </p>
-        </div>
-
-        <div className="mt-6 flex justify-end items-end">
-          {account.isDefault && (
-            <div className="bg-white/20 px-2 py-1 rounded text-xs font-medium">
-              Default
+        {/* Card content */}
+        <div className="p-6 text-white relative">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm opacity-80">{account.bankName}</p>
+              <h3 className="font-bold text-lg mt-1">{account.accountName}</h3>
             </div>
-          )}
+            <div onClick={handleShareClick}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+                    <Share2 className="h-4 w-4 text-white" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleShare("Email")}>
+                    Email
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare("SMS")}>
+                    SMS
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare("Copy Link")}>
+                    Copy Link
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm opacity-80">Card Number</p>
+            <p className="font-mono text-lg tracking-wider">
+              {formatAccountNumber(account.accountNumber)}
+            </p>
+          </div>
+
+          <div className="mt-6 flex justify-end items-end">
+            {account.isDefault && (
+              <div className="bg-white/20 px-2 py-1 rounded text-xs font-medium">
+                Default
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Card chip design */}
-        <div className="absolute top-6 right-6 w-10 h-7 bg-yellow-300/80 rounded-md border border-yellow-400/50"></div>
+        {/* Card chip design - updated with better styling */}
+        <div className="absolute top-6 right-6">
+          <div className="w-12 h-9 rounded-md bg-gradient-to-br from-yellow-300 to-yellow-400 border border-yellow-500/30 shadow-inner grid grid-cols-3 grid-rows-3 gap-[1px] p-[2px]">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="bg-yellow-600/30 rounded-[1px]" />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

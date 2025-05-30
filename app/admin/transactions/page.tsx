@@ -94,10 +94,12 @@ export default function AdminTransactionsPage() {
   );
 
   const NoTransactionsMessage = () => (
-    <div className="flex h-[400px] flex-col items-center justify-center text-center">
-      <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-      <h3 className="mb-2 text-lg font-medium">No Transactions Found</h3>
-      <p className="mb-4 text-sm text-muted-foreground">
+    <div className="flex h-[300px] sm:h-[400px] flex-col items-center justify-center text-center p-4">
+      <AlertCircle className="mb-4 h-8 sm:h-12 w-8 sm:w-12 text-muted-foreground" />
+      <h3 className="mb-2 text-base sm:text-lg font-medium">
+        No Transactions Found
+      </h3>
+      <p className="mb-4 text-xs sm:text-sm text-muted-foreground max-w-md">
         There are no transactions in the system yet. Transactions will appear
         here once they are created.
       </p>
@@ -105,101 +107,125 @@ export default function AdminTransactionsPage() {
   );
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Transactions</h1>
+    <div className="container mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Transactions</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleRefresh}>
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button variant="outline" onClick={() => setIsFilterOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFilterOpen(true)}
+          >
             <SlidersHorizontal className="mr-2 h-4 w-4" />
-            Filters
+            <span className="hidden sm:inline">Filters</span>
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="p-3 sm:p-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-0 sm:px-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Total Transactions
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="px-0 sm:px-2">
+            <div className="text-lg sm:text-2xl font-bold">
               {filteredTransactions.length}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+        <Card className="p-3 sm:p-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-0 sm:px-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Pending Transactions
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="px-0 sm:px-2">
+            <div className="text-lg sm:text-2xl font-bold">
               {pendingTransactions.length}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+        <Card className="p-3 sm:p-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-0 sm:px-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Rejected Transactions
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="px-0 sm:px-2">
+            <div className="text-lg sm:text-2xl font-bold">
               {rejectedTransactions.length}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Amount</CardTitle>
+        <Card className="p-3 sm:p-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-0 sm:px-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">
+              Net Amount
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="px-0 sm:px-2">
+            <div className="text-lg sm:text-2xl font-bold">
               {formatCurrency(totalAmount)}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Search Bar */}
+      <div className="flex items-center gap-4 w-full">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search transactions..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-8"
+            className="pl-8 h-10 text-sm"
           />
         </div>
       </div>
 
+      {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All Transactions</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="rejected">Rejected</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-        </TabsList>
-        <TabsContent value="all">
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex min-w-full sm:min-w-0">
+            <TabsTrigger value="all" className="text-xs sm:text-sm">
+              All
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+              Pending
+            </TabsTrigger>
+            <TabsTrigger value="rejected" className="text-xs sm:text-sm">
+              Rejected
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="text-xs sm:text-sm">
+              Completed
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Tab Content */}
+        <TabsContent value="all" className="mt-0 sm:mt-2">
           {filteredTransactions.length === 0 && !isLoading ? (
             <NoTransactionsMessage />
           ) : (
-            <TransactionTable
-              transactions={filteredTransactions}
-              isLoading={isLoading}
-              onViewTransaction={handleViewTransaction}
-            />
+            <div className="rounded-lg border overflow-hidden">
+              <TransactionTable
+                transactions={filteredTransactions}
+                isLoading={isLoading}
+                onViewTransaction={handleViewTransaction}
+              />
+            </div>
           )}
         </TabsContent>
-        <TabsContent value="pending">
+        <TabsContent value="pending" className="mt-0 sm:mt-2">
           {pendingTransactions.length === 0 && !isLoading ? (
             <NoTransactionsMessage />
           ) : (
@@ -210,7 +236,7 @@ export default function AdminTransactionsPage() {
             />
           )}
         </TabsContent>
-        <TabsContent value="rejected">
+        <TabsContent value="rejected" className="mt-0 sm:mt-2">
           {rejectedTransactions.length === 0 && !isLoading ? (
             <NoTransactionsMessage />
           ) : (
@@ -221,7 +247,7 @@ export default function AdminTransactionsPage() {
             />
           )}
         </TabsContent>
-        <TabsContent value="completed">
+        <TabsContent value="completed" className="mt-0 sm:mt-2">
           {completedTransactions.length === 0 && !isLoading ? (
             <NoTransactionsMessage />
           ) : (

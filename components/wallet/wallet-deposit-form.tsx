@@ -1,3 +1,4 @@
+// components/wallet/WalletDepositForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -67,11 +68,12 @@ export function WalletDepositForm() {
       const dateTime = new Date(values.time);
       const isoDateTime = dateTime.toISOString();
 
+      // depositToWallet will now create a PENDING transaction
       await dispatch(
         depositToWallet({
           amount,
           description: values.description || "",
-          status: "PENDING",
+          status: "PENDING", // Explicitly set status to PENDING
           location: values.location,
           time: isoDateTime,
         })
@@ -80,13 +82,13 @@ export function WalletDepositForm() {
       await Swal.fire({
         position: "bottom-end",
         icon: "success",
-        title: "Balance Added Successfully",
+        title: "Deposit Request Sent Successfully", // Changed title to reflect pending state
         text: `${formatCurrency(
           amount,
           wallet?.currency || "USD"
-        )} has been added to your wallet.`,
+        )} deposit request has been sent to admin for approval.`, // Updated message
         showConfirmButton: false,
-        timer: 2000,
+        timer: 3000, // Increased timer for a clearer message
         toast: true,
         customClass: {
           popup: "swal2-toast",
@@ -100,8 +102,11 @@ export function WalletDepositForm() {
       Swal.fire({
         position: "bottom-end",
         icon: "error",
-        title: "Failed to Add Balance",
-        text: error instanceof Error ? error.message : "Failed to add balance",
+        title: "Failed to Send Deposit Request", // Changed title
+        text:
+          error instanceof Error
+            ? error.message
+            : "Failed to send deposit request",
         showConfirmButton: false,
         timer: 3000,
         toast: true,
@@ -136,7 +141,8 @@ export function WalletDepositForm() {
             Add Funds to Wallet
           </CardTitle>
           <CardDescription className="text-sm sm:text-base">
-            Instantly add money to your wallet
+            Request to add money to your wallet. Funds will be available upon
+            admin approval.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -234,7 +240,7 @@ export function WalletDepositForm() {
                 className="w-full h-12 text-base"
                 disabled={isLoading || isSubmitting}
               >
-                {isLoading || isSubmitting ? "Processing..." : "Add Funds"}
+                {isLoading || isSubmitting ? "Processing..." : "Request Funds"}
               </Button>
             </form>
           </Form>
@@ -244,7 +250,8 @@ export function WalletDepositForm() {
       <div className="mt-6 text-sm text-muted-foreground space-y-2">
         <p className="flex items-center gap-2">
           <span className="font-medium">Note:</span>
-          Funds will be available in your wallet immediately.
+          Your deposit request will be reviewed by an admin. Funds will be added
+          to your wallet upon approval.
         </p>
         <p>
           By proceeding, you agree to our terms and conditions regarding wallet

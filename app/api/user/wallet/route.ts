@@ -1,9 +1,10 @@
+// app/api/wallet/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 
-// Get wallet details
+// Get wallet details (No changes here)
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -55,7 +56,7 @@ export async function GET() {
   }
 }
 
-// Deposit to wallet
+// Deposit to wallet (Modified)
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
 
-    // Get or create wallet
+    // Get or create wallet (No change needed here, as we still need the walletId)
     let wallet = await prisma.wallet.findUnique({
       where: { userId: userData.id },
     });
@@ -92,28 +93,24 @@ export async function POST(request: Request) {
       });
     }
 
-    // Create transaction and update wallet balance in a transaction
-    const result = await prisma.$transaction([
-      prisma.walletTransaction.create({
-        data: {
-          walletId: wallet.id,
-          userId: userData.id,
-          amount,
-          currency: wallet.currency,
-          type: "DEPOSIT",
-          status: status || "PENDING",
-          description: description || "Wallet deposit",
-          date: time || new Date().toISOString(),
-          location: location || undefined,
-        },
-      }),
-      prisma.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: { increment: amount } },
-      }),
-    ]);
+    // Create transaction with PENDING status.
+    // **DO NOT update wallet balance here.**
+    const newTransaction = await prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        userId: userData.id,
+        amount,
+        currency: wallet.currency,
+        type: "DEPOSIT",
+        status: status || "PENDING", // Ensure it's PENDING initially
+        description: description || "Wallet deposit",
+        date: time || new Date().toISOString(),
+        location: location || undefined,
+      },
+    });
 
-    return NextResponse.json(result[0]);
+    // Return the created transaction. The balance will not be part of this response for pending transactions.
+    return NextResponse.json({ transaction: newTransaction }); // Wrap in an object for clarity
   } catch (error) {
     console.error("Error processing deposit:", error);
     return NextResponse.json(

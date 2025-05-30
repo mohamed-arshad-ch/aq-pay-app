@@ -13,9 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency-utils";
 import { format } from "date-fns";
-import { Eye } from "lucide-react";
+import { Eye, Copy } from "lucide-react";
 import type { Transaction } from "@/types";
 import { TransactionSkeleton } from "./transaction-skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "@/components/ui/use-toast";
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -80,6 +87,23 @@ export function TransactionTable({
     }
   };
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        description: "Transaction ID copied to clipboard",
+        duration: 2000,
+      });
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      toast({
+        variant: "destructive",
+        description: "Failed to copy to clipboard",
+        duration: 2000,
+      });
+    }
+  };
+
   if (isLoading) {
     return <TransactionSkeleton />;
   }
@@ -125,8 +149,23 @@ export function TransactionTable({
         <TableBody>
           {sortedTransactions.map((transaction) => (
             <TableRow key={transaction.id}>
-              <TableCell className="font-mono">
-                {transaction.id.slice(0, 8)}...
+              <TableCell>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className="font-mono text-blue-600 hover:text-blue-800 cursor-pointer flex items-center gap-2 w-fit"
+                        onClick={() => copyToClipboard(transaction.id)}
+                      >
+                        <span>{transaction.id.slice(0, 8)}...</span>
+                        <Copy className="h-3 w-3 opacity-50" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Click to copy full ID</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </TableCell>
               <TableCell>
                 {format(new Date(transaction.date), "MMM d, yyyy HH:mm")}

@@ -1,3 +1,4 @@
+// store/slices/walletSlice.ts
 import {
   createSlice,
   createAsyncThunk,
@@ -8,14 +9,14 @@ import { WalletTransactionStatus, WalletTransactionType } from "@/types";
 import {
   fetchWalletDetails,
   fetchWalletTransactions,
-  addWalletBalance,
+  addWalletBalance, // This API call will now return the PENDING transaction
   sendWalletBalance,
 } from "@/api/wallet";
 
 interface WalletState {
   wallet: Wallet | null;
   transactions: WalletTransaction[];
-  pendingTransactions: WalletTransaction[];
+  pendingTransactions: WalletTransaction[]; // This array will hold pending transactions
   isLoading: boolean;
   error: string | null;
   notifications: Array<{
@@ -36,7 +37,7 @@ const initialState: WalletState = {
   notifications: [],
 };
 
-// Async thunks
+// Async thunks (No changes to depositToWallet's definition, but its return type implies the backend change)
 export const getWalletDetails = createAsyncThunk(
   "wallet/getWalletDetails",
   async (_, { rejectWithValue }) => {
@@ -73,7 +74,7 @@ export const depositToWallet = createAsyncThunk(
     {
       amount,
       description,
-      status,
+      status, // This should be 'PENDING' for initial deposit requests
       location,
       time,
     }: {
@@ -86,13 +87,15 @@ export const depositToWallet = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      return await addWalletBalance(
+      // The addWalletBalance API call will now return the created PENDING transaction
+      const response = await addWalletBalance(
         amount,
         description,
         status,
         location,
         time
       );
+      return response.transaction; // Access the transaction property
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to add balance"
@@ -135,43 +138,69 @@ const walletSlice = createSlice({
     setAllTransactions: (state, action: PayloadAction<WalletTransaction[]>) => {
       state.transactions = action.payload;
     },
+    // This reducer is key for updating transaction status and balance when approved
     updateTransaction: (
       state,
       action: PayloadAction<WalletTransaction & { wallet?: Wallet }>
     ) => {
-      const index = state.transactions.findIndex(
-        (t) => t.id === action.payload.id
+      const { id, status, type, wallet } = action.payload;
+      const index = state.transactions.findIndex((t) => t.id === id);
+      const pendingIndex = state.pendingTransactions.findIndex(
+        (t) => t.id === id
       );
-      if (index !== -1) {
-        state.transactions[index] = action.payload;
+
+      // If the transaction exists in pending and is now completed, move it to transactions
+      if (
+        pendingIndex !== -1 &&
+        status === WalletTransactionStatus.COMPLETED
+      ) {
+        const completedTransaction = state.pendingTransactions[pendingIndex];
+        state.pendingTransactions.splice(pendingIndex, 1); // Remove from pending
+        state.transactions.unshift({ ...completedTransaction, ...action.payload }); // Add to main transactions
+      } else if (index !== -1) {
+        // Otherwise, just update an existing transaction in the main list
+        state.transactions[index] = { ...state.transactions[index], ...action.payload };
       }
 
-      // Update wallet balance only if:
-      // 1. The transaction is completed
-      // 2. It's a TRANSFER type transaction
-      // 3. The wallet object is provided
+      // Update wallet balance only if the transaction is completed AND it's a DEPOSIT or TRANSFER
+      // The wallet object should be provided when the balance is updated
       if (
-        action.payload.wallet &&
+        wallet &&
         state.wallet &&
-        action.payload.status === WalletTransactionStatus.COMPLETED &&
-        action.payload.type === WalletTransactionType.TRANSFER
+        status === WalletTransactionStatus.COMPLETED &&
+        (type === WalletTransactionType.DEPOSIT || type === WalletTransactionType.TRANSFER)
       ) {
-        state.wallet.balance = action.payload.wallet.balance;
+        state.wallet.balance = wallet.balance;
       }
     },
-    updateTransactionStatus: (
+    updateTransactionStatus: ( // Consider deprecating or merging this into updateTransaction for consistency
       state,
       action: PayloadAction<{
         transactionId: string;
         status: WalletTransactionStatus;
-        wallet?: Wallet;
+        wallet?: Wallet; // Include wallet for balance update
       }>
     ) => {
       const { transactionId, status, wallet } = action.payload;
       const transaction = state.transactions.find(
         (t) => t.id === transactionId
       );
-      if (transaction) {
+      const pendingTransaction = state.pendingTransactions.find(
+        (t) => t.id === transactionId
+      );
+
+      if (pendingTransaction) {
+        pendingTransaction.status = status;
+        if (status === WalletTransactionStatus.COMPLETED) {
+          state.transactions.unshift(pendingTransaction); // Move to main transactions
+          state.pendingTransactions = state.pendingTransactions.filter(
+            (t) => t.id !== transactionId
+          ); // Remove from pending
+          if (wallet && state.wallet) {
+            state.wallet.balance = wallet.balance;
+          }
+        }
+      } else if (transaction) {
         transaction.status = status;
         if (wallet && state.wallet) {
           state.wallet.balance = wallet.balance;
@@ -240,20 +269,19 @@ const walletSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      // Deposit to Wallet
+      // Deposit to Wallet (Modified)
       .addCase(depositToWallet.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(depositToWallet.fulfilled, (state, action) => {
         state.isLoading = false;
-        if (state.wallet) {
-          state.wallet.balance = action.payload.newBalance;
-        }
-        state.transactions = [
-          action.payload.transaction,
-          ...state.transactions,
+        // Add the PENDING transaction to the pendingTransactions array
+        state.pendingTransactions = [
+          action.payload, // action.payload is now just the transaction object
+          ...state.pendingTransactions,
         ];
+        // DO NOT update state.wallet.balance here. It will be updated when the transaction is completed.
       })
       .addCase(depositToWallet.rejected, (state, action) => {
         state.isLoading = false;
@@ -282,7 +310,7 @@ export const {
   clearWalletError,
   setAllTransactions,
   updateTransaction,
-  updateTransactionStatus,
+  updateTransactionStatus, // Keep this, as it's useful for admin side to update status
   addNotification,
   markNotificationAsRead,
   markAllNotificationsAsRead,

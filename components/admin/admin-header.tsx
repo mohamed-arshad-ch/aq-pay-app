@@ -1,11 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Bell, LogOut, Menu, Moon, Search, Settings, Sun, User } from "lucide-react"
-import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { logout } from "@/store/slices/authSlice"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Bell,
+  LogOut,
+  Menu,
+  Moon,
+  Search,
+  Settings,
+  Sun,
+  User,
+} from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { logout } from "@/store/slices/authSlice";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,38 +22,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { AdminSidebar } from "./admin-sidebar"
-import { useTheme } from "next-themes"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { AdminSidebar } from "./admin-sidebar";
+import { useTheme } from "next-themes";
 
 export function AdminHeader() {
-  const router = useRouter()
-  const dispatch = useAppDispatch()
-  const { theme, setTheme } = useTheme()
-  const user = useAppSelector((state) => state.auth.user)
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { theme, setTheme } = useTheme();
+  const user = useAppSelector((state) => state.auth.user);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleLogout = () => {
-    dispatch(logout())
-    router.push("/auth/login")
-  }
+    dispatch(logout());
+    router.push("/auth/login");
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background px-4 md:px-6">
       <div className="flex items-center gap-2 md:hidden">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="md:hidden">
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0">
-            <AdminSidebar />
-          </SheetContent>
-        </Sheet>
         <span className="text-lg font-semibold">Admin Portal</span>
       </div>
 
@@ -73,7 +71,11 @@ export function AdminHeader() {
             </Button>
           </div>
         ) : (
-          <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSearchOpen(true)}
+          >
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>
           </Button>
@@ -84,8 +86,16 @@ export function AdminHeader() {
           <span className="sr-only">Notifications</span>
         </Button>
 
-        <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
           <span className="sr-only">Toggle theme</span>
         </Button>
 
@@ -99,7 +109,9 @@ export function AdminHeader() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>
               {user?.firstName} {user?.lastName}
-              <p className="text-xs font-normal text-muted-foreground">{user?.email}</p>
+              <p className="text-xs font-normal text-muted-foreground">
+                {user?.email}
+              </p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push("/admin/profile")}>
@@ -119,5 +131,5 @@ export function AdminHeader() {
         </DropdownMenu>
       </div>
     </header>
-  )
+  );
 }

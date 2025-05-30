@@ -21,9 +21,17 @@ import {
   Save,
   X,
   Loader2,
+  Copy,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface User {
   id: string;
@@ -101,6 +109,40 @@ function TransactionDetailsSkeleton() {
   );
 }
 
+// Add this helper function at the top of your file, after the imports
+const formatDate = (dateString: string | undefined) => {
+  if (!dateString) return "N/A";
+
+  try {
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+    return format(date, "PPP p");
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Invalid Date";
+  }
+};
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast({
+      description: "Transaction ID copied to clipboard",
+      duration: 2000,
+    });
+  } catch (err) {
+    console.error("Failed to copy:", err);
+    toast({
+      variant: "destructive",
+      description: "Failed to copy to clipboard",
+      duration: 2000,
+    });
+  }
+};
+
 export default function TransactionDetailsPage({
   params,
 }: {
@@ -117,6 +159,8 @@ export default function TransactionDetailsPage({
   const [editedLocation, setEditedLocation] = useState("");
   const [editedTime, setEditedTime] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   useEffect(() => {
     const fetchTransaction = async () => {
@@ -127,10 +171,25 @@ export default function TransactionDetailsPage({
         }
         const data = await response.json();
         setTransaction(data);
+
         // Initialize edit values
         setEditedAmount(data.amount.toString());
         setEditedLocation(data.location || "");
-        setEditedTime(data.date);
+
+        // Format the date for datetime-local input
+        try {
+          const date = new Date(data.date);
+          if (!isNaN(date.getTime())) {
+            // Format date to YYYY-MM-DDThh:mm
+            const formattedDate = date.toISOString().slice(0, 16);
+            setEditedTime(formattedDate);
+          } else {
+            setEditedTime("");
+          }
+        } catch (error) {
+          console.error("Error formatting initial date:", error);
+          setEditedTime("");
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -143,6 +202,7 @@ export default function TransactionDetailsPage({
 
   const handleApprove = async () => {
     try {
+      setIsApproving(true);
       const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
         method: "POST",
         headers: {
@@ -156,46 +216,72 @@ export default function TransactionDetailsPage({
       }
 
       const updatedTransaction = await response.json();
-      setTransaction(updatedTransaction);
 
-      // Update the transaction in the Redux store
-      dispatch(updateTransaction(updatedTransaction));
+      // Update both local state and Redux store
+      setTransaction(updatedTransaction.transaction || updatedTransaction);
+      dispatch(
+        updateTransaction(updatedTransaction.transaction || updatedTransaction)
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to approve transaction"
       );
+    } finally {
+      setIsApproving(false);
     }
   };
 
   const handleReject = async () => {
     try {
+      setIsRejecting(true);
       const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: "REJECTED" }),
+        body: JSON.stringify({
+          status: "REJECTED", // Make sure this matches your WalletTransactionStatus enum
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to reject transaction");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to reject transaction");
       }
 
       const updatedTransaction = await response.json();
-      setTransaction(updatedTransaction);
 
-      // Update the transaction in the Redux store
-      dispatch(updateTransaction(updatedTransaction));
+      // Update both local state and Redux store
+      setTransaction(updatedTransaction.transaction);
+      dispatch(updateTransaction(updatedTransaction.transaction));
+
+      // Show success message
+      toast({
+        title: "Transaction rejected",
+        description: "The transaction has been rejected successfully.",
+        variant: "default",
+      });
     } catch (err) {
+      console.error("Reject error:", err);
       setError(
         err instanceof Error ? err.message : "Failed to reject transaction"
       );
+
+      // Show error message
+      toast({
+        title: "Error",
+        description:
+          err instanceof Error ? err.message : "Failed to reject transaction",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRejecting(false);
     }
   };
 
   const handleEdit = async () => {
     if (!transaction) return;
-  
+
     setIsUpdating(true);
     try {
       const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
@@ -210,21 +296,20 @@ export default function TransactionDetailsPage({
           date: editedTime,
         }),
       });
-  
+
       if (!response.ok) {
         throw new Error("Failed to update transaction");
       }
-  
+
       const updatedTransaction = await response.json();
       setTransaction(updatedTransaction.transaction); // Update local component state
       setIsEditing(false);
-  
+
       // Update the transaction in the Redux store
       dispatch(updateTransaction(updatedTransaction.transaction));
-  
+
       // The component should re-render automatically with the updated 'transaction' state
       // and Redux store data. No full page reload (window.location.reload()) is needed.
-  
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to update transaction"
@@ -233,7 +318,6 @@ export default function TransactionDetailsPage({
       setIsUpdating(false);
     }
   };
-  
 
   if (isLoading) {
     return <TransactionDetailsSkeleton />;
@@ -319,6 +403,7 @@ export default function TransactionDetailsPage({
       </div>
 
       <div className="grid gap-6">
+        {/* Transaction Information Card */}
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">
             Transaction Information
@@ -326,7 +411,24 @@ export default function TransactionDetailsPage({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Transaction ID</p>
-              <p className="font-medium">{transaction?.id}</p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="flex items-center gap-2 cursor-pointer group"
+                      onClick={() => copyToClipboard(transaction?.id)}
+                    >
+                      <p className="font-medium text-blue-600 hover:text-blue-800">
+                        {transaction?.id}
+                      </p>
+                      <Copy className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Click to copy ID</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div>
               <p className="text-sm text-gray-500">Amount</p>
@@ -348,7 +450,7 @@ export default function TransactionDetailsPage({
             <div>
               <p className="text-sm text-gray-500">Type</p>
               <p className="font-medium capitalize">
-                {transaction?.type.toLowerCase()}
+                {transaction?.type?.toLowerCase() || "Unknown"}
               </p>
             </div>
             <div>
@@ -366,9 +468,7 @@ export default function TransactionDetailsPage({
                   />
                 </div>
               ) : (
-                <p className="font-medium">
-                  {format(new Date(transaction?.date), "PPP p")}
-                </p>
+                <p className="font-medium">{formatDate(transaction?.date)}</p>
               )}
             </div>
             <div>
@@ -388,22 +488,24 @@ export default function TransactionDetailsPage({
           </div>
         </Card>
 
+        {/* User Information Card */}
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">User Information</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Name</p>
               <p className="font-medium">
-                {transaction.user?.firstName} {transaction.user?.lastName}
+                {transaction?.user?.firstName} {transaction?.user?.lastName}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Email</p>
-              <p className="font-medium">{transaction.user?.email}</p>
+              <p className="font-medium">{transaction?.user?.email}</p>
             </div>
           </div>
         </Card>
 
+        {/* Bank Account Information Card */}
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">
             Bank Account Information
@@ -412,29 +514,54 @@ export default function TransactionDetailsPage({
             <div>
               <p className="text-sm text-gray-500">Account Name</p>
               <p className="font-medium">
-                {transaction.bankAccount?.accountName}
+                {transaction?.bankAccount?.accountName}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Account Number</p>
               <p className="font-medium">
-                {transaction.bankAccount?.accountNumber}
+                {transaction?.bankAccount?.accountNumber}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Bank Name</p>
-              <p className="font-medium">{transaction.bankAccount?.bankName}</p>
+              <p className="font-medium">
+                {transaction?.bankAccount?.bankName}
+              </p>
             </div>
           </div>
         </Card>
 
+        {/* Show approve/reject buttons only for pending transactions */}
         {transaction?.status === "PENDING" && !isEditing && (
           <div className="flex gap-4 justify-end">
-            <Button variant="destructive" onClick={handleReject}>
-              Reject Transaction
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={isRejecting || isApproving}
+            >
+              {isRejecting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Rejecting...
+                </>
+              ) : (
+                "Reject Transaction"
+              )}
             </Button>
-            <Button variant="default" onClick={handleApprove}>
-              Approve Transaction
+            <Button
+              variant="default"
+              onClick={handleApprove}
+              disabled={isApproving || isRejecting}
+            >
+              {isApproving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                "Approve Transaction"
+              )}
             </Button>
           </div>
         )}
