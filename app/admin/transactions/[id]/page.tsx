@@ -165,7 +165,7 @@ export default function TransactionDetailsPage({
   useEffect(() => {
     const fetchTransaction = async () => {
       try {
-        const response = await fetch(`/api/admin/wallet/admin_transactions/${id}`, {
+        const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -208,7 +208,7 @@ export default function TransactionDetailsPage({
   const handleApprove = async () => {
     try {
       setIsApproving(true);
-      const response = await fetch(`/api/admin/wallet/admin_transactions/${id}`, {
+      const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -239,7 +239,7 @@ export default function TransactionDetailsPage({
   const handleReject = async () => {
     try {
       setIsRejecting(true);
-      const response = await fetch(`/api/admin/wallet/admin_transactions/${id}`, {
+      const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -289,7 +289,7 @@ export default function TransactionDetailsPage({
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`/api/admin/wallet/admin_transactions/${id}`, {
+      const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
