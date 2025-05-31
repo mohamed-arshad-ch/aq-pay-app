@@ -60,7 +60,7 @@ export const transactionsApi = {
   },
 
   approveTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/user/transactions/${id}/approve`, {
+    const response = await fetch(`/api/user/wallettransactions/${id}`, {
       method: "POST",
     });
     if (!response.ok) {
@@ -73,7 +73,7 @@ export const transactionsApi = {
     id: string,
     reason: string
   ): Promise<Transaction> => {
-    const response = await fetch(`/api/user/transactions/${id}/reject`, {
+    const response = await fetch(`/api/user/wallet/transactions/${id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -87,7 +87,7 @@ export const transactionsApi = {
   },
 
   cancelTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/user/transactions/${id}/cancel`, {
+    const response = await fetch(`/api/user/wallettransactions/${id}`, {
       method: "POST",
     });
     if (!response.ok) {
