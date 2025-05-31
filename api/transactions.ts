@@ -10,7 +10,7 @@ export const transactionsApi = {
   },
 
   getTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/admin/wallet/transactions/${id}`);
+    const response = await fetch(`/api/admin/trans-det/${id}`);
     if (!response.ok) {
       throw new Error("Failed to fetch transaction");
     }
@@ -34,7 +34,7 @@ export const transactionsApi = {
   approveTransaction: async (id: string): Promise<Transaction> => {
     console.log("Approving transaction:", id);
     
-    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
+    const response = await fetch(`/api/admin/trans-det/${id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -58,7 +58,7 @@ export const transactionsApi = {
   rejectTransaction: async (id: string): Promise<Transaction> => {
     console.log("Rejecting transaction:", id);
     
-    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
+    const response = await fetch(`/api/admin/trans-det/${id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
