@@ -1,9 +1,10 @@
+// app/admin/users/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchUsers } from "@/store/slices/usersSlice";
-import type { User } from "@/store/slices/usersSlice";
+import { fetchUsers } from "@/store/slices/usersSlice"; // Import fetchUserAccounts
+import type { User, Account } from "@/store/slices/usersSlice";
 import {
   Table,
   TableBody,
@@ -24,6 +25,8 @@ import {
   Shield,
   Calendar,
   Clock,
+  Banknote,
+  Wallet,
 } from "lucide-react";
 import {
   Dialog,
@@ -50,30 +53,17 @@ export default function UsersPage() {
   } = useAppSelector((state) => state.users);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isAccountsLoading, setIsAccountsLoading] = useState(false);
 
   useEffect(() => {
     dispatch(fetchUsers());
   }, [dispatch]);
 
-  const handleViewDetails = (user: User) => {
-    setSelectedUser(user);
+  const handleViewDetails = async (user: User) => {
+    setSelectedUser(user); // User already has accounts populated
     setIsDetailsOpen(true);
+    // No need for separate account fetching or loading states
   };
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center text-red-500">
-            <p>Error loading users: {error}</p>
-            <Button onClick={() => dispatch(fetchUsers())} className="mt-4">
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -140,6 +130,20 @@ export default function UsersPage() {
                       </TableCell>
                     </TableRow>
                   ))
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      <div className="text-red-500">
+                        <p>Error loading users: {error}</p>
+                        <Button
+                          onClick={() => dispatch(fetchUsers())}
+                          className="mt-4"
+                        >
+                          Try Again
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ) : !users || users.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8">
@@ -232,7 +236,7 @@ export default function UsersPage() {
 
       {/* User Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
             <DialogDescription>
@@ -315,14 +319,18 @@ export default function UsersPage() {
                     <UserIcon className="h-4 w-4" />
                     <span>Linked Accounts</span>
                   </div>
-                  <p className="font-medium">{selectedUser.linkedAccounts}</p>
+                  <p className="font-medium">
+                    {selectedUser.linkedAccounts}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <UserIcon className="h-4 w-4" />
                     <span>Transaction Count</span>
                   </div>
-                  <p className="font-medium">{selectedUser.transactionCount}</p>
+                  <p className="font-medium">
+                    {selectedUser.transactionCount}
+                  </p>
                 </div>
               </div>
 
@@ -334,6 +342,49 @@ export default function UsersPage() {
                 <p className="font-medium">
                   ${selectedUser.transactionVolume?.toLocaleString()}
                 </p>
+              </div>
+
+              {/* Accounts Section */}
+              <div className="space-y-4 pt-4 border-t mt-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Banknote className="h-5 w-5" /> Accounts
+                </h3>
+                {isAccountsLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                  </div>
+                ) : selectedUser.accounts && selectedUser.accounts.length > 0 ? (
+                  selectedUser.accounts.map((account) => (
+                    <Card key={account.id} className="p-4">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Account Name:</span>
+                        </div>
+                        <span>{account.accountName}</span>
+
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="h-4 w-4 text-muted-foreground" />{" "}
+                          {/* Changed icon to represent type */}
+                          <span className="font-medium">Type:</span>
+                        </div>
+                        <span>{account.type}</span>
+
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Created:</span>
+                        </div>
+                        <span>{formatDate(account.createdAt)}</span>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    No accounts found for this user.
+                  </p>
+                )}
               </div>
             </div>
           )}

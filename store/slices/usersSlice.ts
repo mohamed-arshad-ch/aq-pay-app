@@ -1,8 +1,20 @@
+// store/slices/usersSlice.ts
 import {
   createSlice,
   createAsyncThunk,
   type PayloadAction,
 } from "@reduxjs/toolkit";
+
+export interface Account {
+  id: string;
+  accountNumber: string;
+  accountName: string;
+  balance: number;
+  currency: string; // Add currency to the Account interface
+  type: "SAVINGS" | "CHECKING" | "CREDIT_CARD" | "LOAN" | "UNKNOWN"; // Example types, added UNKNOWN for safety
+  status: "ACTIVE" | "CLOSED" | "PENDING"; // Example statuses
+  createdAt: string; // Ensure this is a string as it comes from JSON
+}
 
 export interface User {
   id: string;
@@ -10,8 +22,8 @@ export interface User {
   lastName: string;
   email: string;
   phoneNumber: string | null;
-  createdAt: Date;
-  lastLogin: Date;
+  createdAt: string; // Changed to string to match serialized Date from API
+  lastLogin: string; // Changed to string to match serialized Date from API
   twoFactorEnabled: boolean;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   role: string;
@@ -20,6 +32,7 @@ export interface User {
   transactionVolume: number;
   riskLevel: string;
   kycStatus: string;
+  accounts?: Account[]; // Make accounts optional, to be fetched on demand
   notes?: string;
 }
 
@@ -40,6 +53,7 @@ export const fetchUsers = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await fetch("/api/admin/users");
+      console.log(response);
       if (!response.ok) {
         throw new Error("Failed to fetch users");
       }
@@ -62,14 +76,14 @@ const usersSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchUsers.fulfilled, (state, action) => {
+      .addCase(fetchUsers.fulfilled, (state, action: PayloadAction<User[]>) => {
         state.loading = false;
         state.data = action.payload;
       })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      });
+      })
   },
 });
 
