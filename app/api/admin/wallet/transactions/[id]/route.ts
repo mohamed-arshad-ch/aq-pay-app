@@ -4,44 +4,29 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { WalletTransactionStatus } from "@/types";
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    console.log('API Route called with ID:', params.id);
-    
+    const { id } = await params;
+    console.log("API Route called with ID:", id);
+
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token");
 
     if (!token?.value) {
-      console.log('No auth token found');
+      console.log("No auth token found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userData = await verifyToken(token.value);
     if (!userData) {
-      console.log('Invalid token');
+      console.log("Invalid token");
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const id = params.id;
-    console.log('Fetching transaction with ID:', id);
-
-    // Test database connection first
-    try {
-      await prisma.$connect();
-      console.log('Database connected successfully');
-    } catch (dbError) {
-      console.error('Database connection failed:', dbError);
-      return NextResponse.json(
-        { error: "Database connection failed" },
-        { status: 500 }
-      );
-    }
+    console.log("Fetching transaction with ID:", id);
 
     const transaction = await prisma.$queryRaw`
       SELECT 
@@ -64,39 +49,30 @@ export async function GET(
       WHERE wt.id = ${id}
     `;
 
-    console.log('Query result:', transaction);
+    console.log("Query result:", transaction);
 
-    if (
-      !transaction ||
-      !Array.isArray(transaction) ||
-      transaction.length === 0
-    ) {
-      return NextResponse.json(
-        { error: "Transaction not found" },
-        { status: 404 }
-      );
+    if (!transaction || !Array.isArray(transaction) || transaction.length === 0) {
+      return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
 
     return NextResponse.json(transaction[0]);
   } catch (error) {
     console.error("Error fetching transaction:", error);
     return NextResponse.json(
-      { 
+      {
         error: "Internal server error",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === "development" ? (error as Error).message : undefined,
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
+    console.log("Updating transaction with ID:", id);
+
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token");
 
@@ -109,118 +85,185 @@ export async function POST(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const id = params.id;
     const body = await request.json();
-    const { status } = body;
+    const { status, amount, location, date, reason } = body;
+    console.log("Request body:", body);
 
-    // Validate status
-    if (!status || !Object.values(WalletTransactionStatus).includes(status)) {
+    // Validate status if provided
+    if (status && !Object.values(WalletTransactionStatus).includes(status)) {
       return NextResponse.json(
         {
-          error: "Invalid status. Must be one of: PENDING, COMPLETED, REJECTED",
+          error: "Invalid status. Must be one of: PENDING, COMPLETED, REJECTED, CANCELLED",
         },
         { status: 400 }
       );
     }
 
-    // Get the current transaction
+    // Validate amount if provided
+    if (amount !== undefined && (isNaN(amount) || amount <= 0)) {
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    }
+
+    // Validate date if provided
+    let parsedDate: Date | undefined;
+    if (date) {
+      parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+      }
+    }
+
+    // First, get the current transaction outside the transaction block
     const currentTransaction = await prisma.walletTransaction.findUnique({
       where: { id },
-      include: { wallet: true },
+      include: { 
+        wallet: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        bankAccount: {
+          select: {
+            id: true,
+            accountName: true,
+            accountNumber: true,
+            bankName: true,
+          },
+        },
+      },
     });
 
     if (!currentTransaction) {
-      return NextResponse.json(
-        { error: "Transaction not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
 
-    // Start a transaction to ensure wallet balance is updated atomically
-    const result = await prisma.$transaction(async (prisma) => {
+    console.log("Current transaction:", currentTransaction);
+
+    // Use a transaction for atomic updates
+    const result = await prisma.$transaction(async (tx) => {
       let walletUpdate = {};
 
-      // Only update wallet balance if status is changing to COMPLETED
+      // Handle balance updates only if status is changing to COMPLETED or from COMPLETED
       if (status === "COMPLETED" && currentTransaction.status !== "COMPLETED") {
-        // For deposits, add to wallet balance
         if (currentTransaction.type === "DEPOSIT") {
           walletUpdate = {
             balance: {
-              increment: currentTransaction.amount,
+              increment: amount ?? currentTransaction.amount,
+            },
+          };
+        } else if (currentTransaction.type === "WITHDRAWAL") {
+          // Check for sufficient balance
+          const wallet = await tx.wallet.findUnique({
+            where: { id: currentTransaction.walletId },
+          });
+          if (!wallet || wallet.balance < (amount ?? currentTransaction.amount)) {
+            throw new Error("Insufficient wallet balance");
+          }
+          walletUpdate = {
+            balance: {
+              decrement: amount ?? currentTransaction.amount,
             },
           };
         }
-        // For withdrawals, subtract from wallet balance
-        else if (currentTransaction.type === "WITHDRAWAL") {
+      } else if (currentTransaction.status === "COMPLETED" && status !== "COMPLETED") {
+        // Reversing a completed transaction
+        if (currentTransaction.type === "DEPOSIT") {
           walletUpdate = {
             balance: {
               decrement: currentTransaction.amount,
             },
           };
-        }
-
-        // Update wallet if needed
-        if (Object.keys(walletUpdate).length > 0) {
-          await prisma.wallet.update({
-            where: { id: currentTransaction.walletId },
-            data: walletUpdate,
-          });
+        } else if (currentTransaction.type === "WITHDRAWAL") {
+          walletUpdate = {
+            balance: {
+              increment: currentTransaction.amount,
+            },
+          };
         }
       }
 
-      // If changing from COMPLETED to another status, reverse the balance change
-      if (currentTransaction.status === "COMPLETED" && status !== "COMPLETED") {
-        // For deposits, subtract from wallet balance
-        if (currentTransaction.type === "DEPOSIT") {
-          walletUpdate = {
-            balance: {
-              decrement: currentTransaction.amount,
-            },
-          };
-        }
-        // For withdrawals, add back to wallet balance
-        else if (currentTransaction.type === "WITHDRAWAL") {
-          walletUpdate = {
-            balance: {
-              increment: currentTransaction.amount,
-            },
-          };
-        }
-
-        // Update wallet if needed
-        if (Object.keys(walletUpdate).length > 0) {
-          await prisma.wallet.update({
-            where: { id: currentTransaction.walletId },
-            data: walletUpdate,
-          });
-        }
+      // Update wallet if needed
+      if (Object.keys(walletUpdate).length > 0) {
+        await tx.wallet.update({
+          where: { id: currentTransaction.walletId },
+          data: walletUpdate,
+        });
       }
 
       // Update the transaction
-      const updatedTransaction = await prisma.walletTransaction.update({
+      const updatedTransaction = await tx.walletTransaction.update({
         where: { id },
         data: {
-          status,
+          status: status ?? currentTransaction.status,
+          amount: amount ?? currentTransaction.amount,
+          location: location ?? currentTransaction.location,
+          date: parsedDate ?? currentTransaction.date,
           updatedAt: new Date(),
+          ...(reason && { reason }), // Include reason if provided (e.g., for rejections)
         },
         include: {
           wallet: true,
-          user: true,
-          bankAccount: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          bankAccount: {
+            select: {
+              id: true,
+              accountName: true,
+              accountNumber: true,
+              bankName: true,
+            },
+          },
         },
       });
 
       return updatedTransaction;
     });
 
-    return NextResponse.json({
-      transaction: result,
-      message: `Transaction ${status.toLowerCase()} successfully`,
-    });
+    console.log("Transaction updated successfully:", result);
+
+    // Return just the transaction object (not wrapped in another object)
+    return NextResponse.json(result);
+
   } catch (error) {
     console.error("Error updating transaction:", error);
+    
+    // Handle specific Prisma errors
+    if (error instanceof Error) {
+      if (error.message.includes('P2028')) {
+        return NextResponse.json(
+          { error: "Transaction is no longer available for updates" },
+          { status: 409 }
+        );
+      }
+      if (error.message.includes('P2025')) {
+        return NextResponse.json(
+          { error: "Transaction not found" },
+          { status: 404 }
+        );
+      }
+      if (error.message.includes('Insufficient wallet balance')) {
+        return NextResponse.json(
+          { error: "Insufficient wallet balance" },
+          { status: 400 }
+        );
+      }
+    }
+
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: (error as Error).message || "Internal server error",
+        details: process.env.NODE_ENV === "development" ? (error as Error).message : undefined,
+      },
       { status: 500 }
     );
   }

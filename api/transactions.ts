@@ -1,30 +1,4 @@
-import {
-  type Transaction,
-  TransactionStatus,
-  TransactionType,
-  TransactionCategory,
-} from "@/types";
-
-// Helper function to simulate API delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Helper function to get account details
-const getAccountDetails = async (accountId: string) => {
-  // In a real app, this would be an API call to get account details
-  // For demo purposes, we'll use mock data
-  if (accountId === "1") {
-    return {
-      name: "Primary Checking",
-      number: "1234567890",
-    };
-  } else if (accountId === "2") {
-    return {
-      name: "Savings Account",
-      number: "0987654321",
-    };
-  }
-  return null;
-};
+import { Transaction, TransactionStatus } from "@/types";
 
 export const transactionsApi = {
   getTransactions: async (): Promise<Transaction[]> => {
@@ -36,17 +10,15 @@ export const transactionsApi = {
   },
 
   getTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/user/wallet/transactions/${id}`);
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`);
     if (!response.ok) {
       throw new Error("Failed to fetch transaction");
     }
     return response.json();
   },
 
-  createTransaction: async (
-    transactionData: Partial<Transaction>
-  ): Promise<Transaction> => {
-    const response = await fetch("/api/user/transactions", {
+  createTransaction: async (transactionData: Partial<Transaction>): Promise<Transaction> => {
+    const response = await fetch("/api/user/wallet/transactions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -60,35 +32,108 @@ export const transactionsApi = {
   },
 
   approveTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/user/wallettransactions/${id}`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      throw new Error("Failed to approve transaction");
-    }
-    return response.json();
-  },
-
-  rejectTransaction: async (
-    id: string,
-    reason: string
-  ): Promise<Transaction> => {
-    const response = await fetch(`/api/user/wallet/transactions/${id}`, {
+    console.log("Approving transaction:", id);
+    
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ status: "COMPLETED" }),
     });
+
     if (!response.ok) {
-      throw new Error("Failed to reject transaction");
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Approve transaction error:", errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}: Failed to approve transaction`);
     }
-    return response.json();
+
+    const result = await response.json();
+    console.log("Approve transaction result:", result);
+    
+    // Return the transaction object directly
+    return result;
+  },
+
+  rejectTransaction: async (id: string): Promise<Transaction> => {
+    console.log("Rejecting transaction:", id);
+    
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: "REJECTED" }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Reject transaction error:", errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}: Failed to reject transaction`);
+    }
+
+    const result = await response.json();
+    console.log("Reject transaction result:", result);
+    
+    // Return the transaction object directly
+    return result;
+  },
+
+  resetTransaction: async (id: string): Promise<Transaction> => {
+    console.log("Resetting transaction:", id);
+    
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: "PENDING" }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Reset transaction error:", errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}: Failed to reset transaction`);
+    }
+
+    const result = await response.json();
+    console.log("Reset transaction result:", result);
+    
+    // Return the transaction object directly
+    return result;
+  },
+
+  updateTransaction: async (id: string, data: Partial<Transaction>): Promise<Transaction> => {
+    console.log("Updating transaction:", id, data);
+    
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Update transaction error:", errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}: Failed to update transaction`);
+    }
+
+    const result = await response.json();
+    console.log("Update transaction result:", result);
+    
+    // Return the transaction object directly
+    return result;
   },
 
   cancelTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/user/wallettransactions/${id}`, {
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: "CANCELLED" }),
     });
     if (!response.ok) {
       throw new Error("Failed to cancel transaction");
@@ -98,9 +143,7 @@ export const transactionsApi = {
 
   getTransactionHistory: async (filters?: any): Promise<Transaction[]> => {
     const queryParams = new URLSearchParams(filters).toString();
-    const response = await fetch(
-      `/api/user/wallet/transactions/history?${queryParams}`
-    );
+    const response = await fetch(`/api/user/wallet/transactions/history?${queryParams}`);
     if (!response.ok) {
       throw new Error("Failed to fetch transaction history");
     }

@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   fetchTransactionDetails,
   updateTransactionStatus,
+  pollTransactionStatus,
 } from "@/store/slices/transactionsSlice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +28,6 @@ import {
   Copy,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import {
   Tooltip,
@@ -35,29 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-interface Transaction {
-  id: string;
-  amount: number;
-  currency: string;
-  type: string;
-  status: string;
-  description: string;
-  date: string;
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  bankAccount: {
-    id: string;
-    accountName: string;
-    accountNumber: string;
-    bankName: string;
-  };
-  location?: string;
-}
+import { Transaction } from "@/types";
 
 function TransactionDetailsSkeleton() {
   return (
@@ -66,6 +44,7 @@ function TransactionDetailsSkeleton() {
         <Skeleton className="h-8 w-[200px]" />
         <Skeleton className="h-10 w-[150px]" />
       </div>
+
       <div className="grid gap-6">
         <Card className="p-6">
           <Skeleton className="h-6 w-[200px] mb-4" />
@@ -78,6 +57,7 @@ function TransactionDetailsSkeleton() {
             ))}
           </div>
         </Card>
+
         <Card className="p-6">
           <Skeleton className="h-6 w-[200px] mb-4" />
           <div className="grid grid-cols-2 gap-4">
@@ -89,6 +69,7 @@ function TransactionDetailsSkeleton() {
             ))}
           </div>
         </Card>
+
         <Card className="p-6">
           <Skeleton className="h-6 w-[200px] mb-4" />
           <div className="grid grid-cols-2 gap-4">
@@ -107,9 +88,12 @@ function TransactionDetailsSkeleton() {
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return "N/A";
+
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Invalid Date";
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
     return format(date, "PPP p");
   } catch (error) {
     console.error("Error formatting date:", error);
@@ -134,17 +118,19 @@ const copyToClipboard = async (text: string) => {
   }
 };
 
-export default function TransactionDetailsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+interface TransactionDetailsPageProps {
+  params: { id: string };
+}
+
+export default function TransactionDetailsPage({ params }: TransactionDetailsPageProps) {
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { id } = use(params);
-  const { selectedTransaction, isLoading, error } = useAppSelector(
+  const { selectedTransaction: transaction, isLoading, error } = useAppSelector(
     (state) => state.transactions
   );
+
+  // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
   const [editedAmount, setEditedAmount] = useState("");
   const [editedLocation, setEditedLocation] = useState("");
@@ -153,45 +139,92 @@ export default function TransactionDetailsPage({
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
 
+  // Handle async params
   useEffect(() => {
-    dispatch(fetchTransactionDetails(id));
-  }, [dispatch, id]);
-
-  useEffect(() => {
-    if (selectedTransaction) {
-      setEditedAmount(selectedTransaction.amount.toString());
-      setEditedLocation(selectedTransaction.location || "");
+    const resolveParams = async () => {
       try {
-        const date = new Date(selectedTransaction.date);
-        if (!isNaN(date.getTime())) {
-          setEditedTime(date.toISOString().slice(0, 16));
-        } else {
+        // Handle both sync and async params
+        const resolvedParamsValue = await Promise.resolve(params);
+        setResolvedParams(resolvedParamsValue);
+      } catch (error) {
+        console.error("Error resolving params:", error);
+        setResolvedParams(null);
+      }
+    };
+
+    resolveParams();
+  }, [params]);
+
+  // Fetch transaction details
+  useEffect(() => {
+    if (resolvedParams?.id) {
+      console.log("Fetching transaction details for ID:", resolvedParams.id);
+      dispatch(fetchTransactionDetails(resolvedParams.id))
+        .unwrap()
+        .then((result) => {
+          console.log("Transaction details fetched successfully:", result);
+        })
+        .catch((error) => {
+          console.error("Failed to fetch transaction details:", error);
+        });
+    }
+  }, [resolvedParams?.id, dispatch]);
+
+  // Optional: Poll transaction status for real-time updates
+  useEffect(() => {
+    if (transaction?.status === "PENDING" && transaction?.id) {
+      const interval = setInterval(() => {
+        dispatch(pollTransactionStatus(transaction.id));
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [transaction?.status, transaction?.id, dispatch]);
+
+  // Initialize edit values when transaction is loaded
+  useEffect(() => {
+    if (transaction) {
+      setEditedAmount(transaction.amount?.toString() || "");
+      setEditedLocation(transaction.location || "");
+      
+      if (transaction.date) {
+        try {
+          const date = new Date(transaction.date);
+          if (!isNaN(date.getTime())) {
+            const formattedDate = date.toISOString().slice(0, 16);
+            setEditedTime(formattedDate);
+          } else {
+            setEditedTime("");
+          }
+        } catch (error) {
+          console.error("Error formatting initial date:", error);
           setEditedTime("");
         }
-      } catch (error) {
-        console.error("Error formatting initial date:", error);
-        setEditedTime("");
       }
     }
-  }, [selectedTransaction]);
+  }, [transaction]);
 
   const handleApprove = async () => {
-    if (!selectedTransaction) return;
+    if (!transaction?.id) return;
     setIsApproving(true);
     try {
       await dispatch(
-        updateTransactionStatus({ id, status: "COMPLETED" })
+        updateTransactionStatus({
+          id: transaction.id,
+          status: "COMPLETED",
+        })
       ).unwrap();
       toast({
         title: "Transaction approved",
         description: "The transaction has been approved successfully.",
+        variant: "default",
       });
     } catch (err) {
+      console.error("Error approving transaction:", err);
       toast({
-        variant: "destructive",
         title: "Error",
         description:
           err instanceof Error ? err.message : "Failed to approve transaction",
+        variant: "destructive",
       });
     } finally {
       setIsApproving(false);
@@ -199,22 +232,27 @@ export default function TransactionDetailsPage({
   };
 
   const handleReject = async () => {
-    if (!selectedTransaction) return;
+    if (!transaction?.id) return;
     setIsRejecting(true);
     try {
       await dispatch(
-        updateTransactionStatus({ id, status: "REJECTED" })
+        updateTransactionStatus({
+          id: transaction.id,
+          status: "REJECTED",
+        })
       ).unwrap();
       toast({
         title: "Transaction rejected",
         description: "The transaction has been rejected successfully.",
+        variant: "default",
       });
     } catch (err) {
+      console.error("Error rejecting transaction:", err);
       toast({
-        variant: "destructive",
         title: "Error",
         description:
           err instanceof Error ? err.message : "Failed to reject transaction",
+        variant: "destructive",
       });
     } finally {
       setIsRejecting(false);
@@ -222,47 +260,56 @@ export default function TransactionDetailsPage({
   };
 
   const handleEdit = async () => {
-    if (!selectedTransaction) return;
+    if (!transaction?.id) return;
     setIsUpdating(true);
     try {
-      const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
+      const response = await fetch(`/api/user/wallet/transactions/${transaction.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          status: selectedTransaction.status,
-          amount: parseFloat(editedAmount),
-          location: editedLocation,
-          date: editedTime,
+          status: transaction.status,
+          amount: parseFloat(editedAmount) || transaction.amount,
+          location: editedLocation || transaction.location,
+          date: editedTime || transaction.date,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update transaction");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to update transaction`);
       }
 
       const updatedTransaction = await response.json();
-      dispatch({
-        type: "transactions/updateTransactionStatus/fulfilled",
-        payload: updatedTransaction.transaction,
-      });
+      console.log("Transaction updated successfully:", updatedTransaction);
+      
+      // Refresh the transaction data from the server
+      await dispatch(fetchTransactionDetails(transaction.id)).unwrap();
       setIsEditing(false);
+      
       toast({
         title: "Transaction updated",
-        description: "The transaction details have been updated successfully.",
+        description: "The transaction has been updated successfully.",
+        variant: "default",
       });
     } catch (err) {
+      console.error("Error updating transaction:", err);
       toast({
-        variant: "destructive",
         title: "Error",
         description:
           err instanceof Error ? err.message : "Failed to update transaction",
+        variant: "destructive",
       });
     } finally {
       setIsUpdating(false);
     }
   };
+
+  // Show loading while resolving params
+  if (!resolvedParams) {
+    return <TransactionDetailsSkeleton />;
+  }
 
   if (isLoading) {
     return <TransactionDetailsSkeleton />;
@@ -270,34 +317,62 @@ export default function TransactionDetailsPage({
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-500">{error}</div>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="text-red-500 text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Error Loading Transaction</h2>
+          <p>{error}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => resolvedParams?.id && dispatch(fetchTransactionDetails(resolvedParams.id))}
+          >
+            Retry
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => router.back()}
+          >
+            Go Back
+          </Button>
+        </div>
       </div>
     );
   }
 
-  if (!selectedTransaction) {
+  if (!transaction) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Transaction not found</div>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="text-gray-500 text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Transaction Not Found</h2>
+          <p>The transaction with ID "{resolvedParams.id}" could not be found.</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => router.back()}
+        >
+          Go Back
+        </Button>
       </div>
     );
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
       case "COMPLETED":
-        return <Badge className="bg-green-500">Completed</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>;
       case "PENDING":
-        return <Badge className="bg-yellow-500">Pending</Badge>;
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Pending</Badge>;
       case "REJECTED":
-        return <Badge className="bg-red-500">Rejected</Badge>;
+        return <Badge className="bg-red-500 hover:bg-red-600">Rejected</Badge>;
       case "FAILED":
-        return <Badge className="bg-red-500">Failed</Badge>;
+        return <Badge className="bg-red-500 hover:bg-red-600">Failed</Badge>;
       case "PROCESSING":
-        return <Badge className="bg-blue-500">Processing</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Processing</Badge>;
       default:
-        return <Badge className="bg-gray-500">{status}</Badge>;
+        return <Badge className="bg-gray-500 hover:bg-gray-600">{status || "Unknown"}</Badge>;
     }
   };
 
@@ -306,66 +381,65 @@ export default function TransactionDetailsPage({
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Transaction Details</h1>
         <div className="flex gap-2">
-          {selectedTransaction?.status === "PENDING" &&
-            selectedTransaction?.type === "DEPOSIT" && (
-              <>
-                {isEditing ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditing(false)}
-                      disabled={isUpdating}
-                    >
-                      <X className="mr-2 h-4 w-4" />
-                      Cancel
-                    </Button>
-                    <Button onClick={handleEdit} disabled={isUpdating}>
-                      {isUpdating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save Changes
-                        </>
-                      )}
-                    </Button>
-                  </>
-                ) : (
-                  <Button variant="outline" onClick={() => setIsEditing(true)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Details
+          {transaction.status === "PENDING" && transaction.type === "DEPOSIT" && (
+            <>
+              {isEditing ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                    disabled={isUpdating}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
                   </Button>
-                )}
-              </>
-            )}
-          <Button variant="outline" onClick={() => window.history.back()}>
+                  <Button onClick={handleEdit} disabled={isUpdating}>
+                    {isUpdating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Details
+                </Button>
+              )}
+            </>
+          )}
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Transactions
           </Button>
         </div>
       </div>
 
       <div className="grid gap-6">
+        {/* Transaction Information Card */}
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">
-            Transaction Information
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <h2 className="text-xl font-semibold mb-4">Transaction Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">Transaction ID</p>
+              <p className="text-sm text-gray-500 mb-1">Transaction ID</p>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
                       className="flex items-center gap-2 cursor-pointer group"
-                      onClick={() => copyToClipboard(selectedTransaction.id)}
+                      onClick={() => copyToClipboard(transaction.id)}
                     >
-                      <p className="font-medium text-blue-600 hover:text-blue-800">
-                        {selectedTransaction.id}
+                      <p className="font-medium text-blue-600 hover:text-blue-800 break-all">
+                        {transaction.id}
                       </p>
-                      <Copy className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                      <Copy className="h-4 w-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -375,136 +449,132 @@ export default function TransactionDetailsPage({
               </TooltipProvider>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Amount</p>
+              <p className="text-sm text-gray-500 mb-1">Amount</p>
               {isEditing ? (
-                <div className="mt-1">
-                  <Input
-                    type="number"
-                    value={editedAmount}
-                    onChange={(e) => setEditedAmount(e.target.value)}
-                    placeholder="Enter amount"
-                  />
-                </div>
+                <Input
+                  type="number"
+                  value={editedAmount}
+                  onChange={(e) => setEditedAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  step="0.01"
+                  min="0"
+                />
               ) : (
-                <p className="font-medium">
-                  {formatCurrency(selectedTransaction.amount)}
-                </p>
+                <p className="font-medium">{formatCurrency(transaction.amount || 0)}</p>
               )}
             </div>
             <div>
-              <p className="text-sm text-gray-500">Type</p>
+              <p className="text-sm text-gray-500 mb-1">Type</p>
               <p className="font-medium capitalize">
-                {selectedTransaction.type.toLowerCase()}
+                {transaction.type?.toLowerCase() || "Unknown"}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Status</p>
-              <div className="mt-1">{getStatusBadge(selectedTransaction.status)}</div>
+              <p className="text-sm text-gray-500 mb-1">Status</p>
+              <div className="mt-1">{getStatusBadge(transaction.status)}</div>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Date</p>
+              <p className="text-sm text-gray-500 mb-1">Date</p>
               {isEditing ? (
-                <div className="mt-1">
-                  <Input
-                    type="datetime-local"
-                    value={editedTime}
-                    onChange={(e) => setEditedTime(e.target.value)}
-                  />
-                </div>
+                <Input
+                  type="datetime-local"
+                  value={editedTime}
+                  onChange={(e) => setEditedTime(e.target.value)}
+                />
               ) : (
-                <p className="font-medium">{formatDate(selectedTransaction.date)}</p>
+                <p className="font-medium">{formatDate(transaction.date)}</p>
               )}
             </div>
             <div>
-              <p className="text-sm text-gray-500">Location</p>
+              <p className="text-sm text-gray-500 mb-1">Location</p>
               {isEditing ? (
-                <div className="mt-1">
-                  <Input
-                    value={editedLocation}
-                    onChange={(e) => setEditedLocation(e.target.value)}
-                    placeholder="Enter location"
-                  />
-                </div>
+                <Input
+                  value={editedLocation}
+                  onChange={(e) => setEditedLocation(e.target.value)}
+                  placeholder="Enter location"
+                />
               ) : (
-                <p className="font-medium">{selectedTransaction.location || "N/A"}</p>
+                <p className="font-medium">{transaction.location || "N/A"}</p>
               )}
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">User Information</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">Name</p>
-              <p className="font-medium">
-                {selectedTransaction.user.firstName} {selectedTransaction.user.lastName}
-              </p>
+        {/* User Information Card */}
+        {transaction.user && (
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">User Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Name</p>
+                <p className="font-medium">
+                  {transaction.user.firstName || ""} {transaction.user.lastName || ""}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Email</p>
+                <p className="font-medium">{transaction.user.email || "N/A"}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Email</p>
-              <p className="font-medium">{selectedTransaction.user.email}</p>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">
-            Bank Account Information
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">Account Name</p>
-              <p className="font-medium">
-                {selectedTransaction.bankAccount.accountName}
-              </p>
+        {/* Bank Account Information Card */}
+        {transaction.bankAccount && (
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Bank Account Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Account Name</p>
+                <p className="font-medium">{transaction.bankAccount.accountName || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Account Number</p>
+                <p className="font-medium">{transaction.bankAccount.accountNumber || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Bank Name</p>
+                <p className="font-medium">{transaction.bankAccount.bankName || "N/A"}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Account Number</p>
-              <p className="font-medium">
-                {selectedTransaction.bankAccount.accountNumber}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Bank Name</p>
-              <p className="font-medium">
-                {selectedTransaction.bankAccount.bankName}
-              </p>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
-        {selectedTransaction.status === "PENDING" && !isEditing && (
-          <div className="flex gap-4 justify-end">
-            <Button
-              variant="destructive"
-              onClick={handleReject}
-              disabled={isRejecting || isApproving}
-            >
-              {isRejecting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Rejecting...
-                </>
-              ) : (
-                "Reject Transaction"
-              )}
-            </Button>
-            <Button
-              variant="default"
-              onClick={handleApprove}
-              disabled={isApproving || isRejecting}
-            >
-              {isApproving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Approving...
-                </>
-              ) : (
-                "Approve Transaction"
-              )}
-            </Button>
-          </div>
+        {/* Show approve/reject buttons only for pending transactions */}
+        {transaction.status === "PENDING" && !isEditing && (
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Actions</h2>
+            <div className="flex gap-4 justify-end">
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={isLoading || isRejecting || isApproving}
+              >
+                {isRejecting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Rejecting...
+                  </>
+                ) : (
+                  "Reject Transaction"
+                )}
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleApprove}
+                disabled={isLoading || isApproving || isRejecting}
+              >
+                {isApproving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  "Approve Transaction"
+                )}
+              </Button>
+            </div>
+          </Card>
         )}
       </div>
     </div>
