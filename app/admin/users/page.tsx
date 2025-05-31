@@ -27,6 +27,12 @@ import {
   Clock,
   Banknote,
   Wallet,
+  BanknoteIcon,
+  Building,
+  Hash,
+  Route,
+  Currency,
+  Tag,
 } from "lucide-react";
 import {
   Dialog,
@@ -236,160 +242,221 @@ export default function UsersPage() {
 
       {/* User Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>
-              Detailed information about the user account
-            </DialogDescription>
-          </DialogHeader>
-          {selectedUser && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <UserIcon className="h-4 w-4" />
-                    <span>Full Name</span>
-                  </div>
-                  <p className="font-medium">
-                    {selectedUser.firstName} {selectedUser.lastName}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span>Email</span>
-                  </div>
-                  <p className="font-medium">{selectedUser.email}</p>
-                </div>
-              </div>
+  <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>User Details</DialogTitle>
+      <DialogDescription>
+        Detailed information about the user account
+      </DialogDescription>
+    </DialogHeader>
+    {selectedUser && (
+      <div className="grid gap-6 py-4">
+        {/* User Basic Info */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <UserIcon className="h-4 w-4" />
+              <span>Full Name</span>
+            </div>
+            <p className="font-medium">
+              {selectedUser.firstName} {selectedUser.lastName}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Mail className="h-4 w-4" />
+              <span>Email</span>
+            </div>
+            <p className="font-medium">{selectedUser.email}</p>
+          </div>
+        </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Shield className="h-4 w-4" />
-                    <span>Status</span>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={
-                      selectedUser.status === "ACTIVE"
-                        ? "bg-green-50 text-green-700 border-green-200"
-                        : selectedUser.status === "INACTIVE"
-                        ? "bg-gray-50 text-gray-700 border-gray-200"
-                        : "bg-red-50 text-red-700 border-red-200"
-                    }
-                  >
-                    {selectedUser.status}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <UserIcon className="h-4 w-4" />
-                    <span>Role</span>
-                  </div>
-                  <p className="font-medium">{selectedUser.role}</p>
-                </div>
-              </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Shield className="h-4 w-4" />
+              <span>Status</span>
+            </div>
+            <Badge
+              variant="outline"
+              className={
+                selectedUser.status === "ACTIVE"
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : selectedUser.status === "INACTIVE"
+                  ? "bg-gray-50 text-gray-700 border-gray-200"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }
+            >
+              {selectedUser.status}
+            </Badge>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <UserIcon className="h-4 w-4" />
+              <span>Role</span>
+            </div>
+            <p className="font-medium">{selectedUser.role}</p>
+          </div>
+        </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Registration Date</span>
-                  </div>
-                  <p className="font-medium">
-                    {formatDate(selectedUser.createdAt)}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>Last Login</span>
-                  </div>
-                  <p className="font-medium">
-                    {formatDate(selectedUser.lastLogin)}
-                  </p>
-                </div>
-              </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>Registration Date</span>
+            </div>
+            <p className="font-medium">
+              {formatDate(selectedUser.createdAt)}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Last Login</span>
+            </div>
+            <p className="font-medium">
+              {formatDate(selectedUser.lastLogin)}
+            </p>
+          </div>
+        </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <UserIcon className="h-4 w-4" />
-                    <span>Linked Accounts</span>
-                  </div>
-                  <p className="font-medium">
-                    {selectedUser.linkedAccounts}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <UserIcon className="h-4 w-4" />
-                    <span>Transaction Count</span>
-                  </div>
-                  <p className="font-medium">
-                    {selectedUser.transactionCount}
-                  </p>
-                </div>
-              </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <UserIcon className="h-4 w-4" />
+              <span>Linked Accounts</span>
+            </div>
+            <p className="font-medium">
+              {selectedUser.linkedAccounts}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <UserIcon className="h-4 w-4" />
+              <span>Transaction Count</span>
+            </div>
+            <p className="font-medium">
+              {selectedUser.transactionCount}
+            </p>
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <UserIcon className="h-4 w-4" />
-                  <span>Transaction Volume</span>
-                </div>
-                <p className="font-medium">
-                  ${selectedUser.transactionVolume?.toLocaleString()}
-                </p>
-              </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <UserIcon className="h-4 w-4" />
+            <span>Transaction Volume</span>
+          </div>
+          <p className="font-medium">
+            ${selectedUser.transactionVolume?.toLocaleString()}
+          </p>
+        </div>
 
-              {/* Accounts Section */}
-              <div className="space-y-4 pt-4 border-t mt-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Banknote className="h-5 w-5" /> Accounts
-                </h3>
-                {isAccountsLoading ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                  </div>
-                ) : selectedUser.accounts && selectedUser.accounts.length > 0 ? (
-                  selectedUser.accounts.map((account) => (
-                    <Card key={account.id} className="p-4">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Wallet className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">Account Name:</span>
-                        </div>
-                        <span>{account.accountName}</span>
-
-                        <div className="flex items-center gap-2">
-                          <UserIcon className="h-4 w-4 text-muted-foreground" />{" "}
-                          {/* Changed icon to represent type */}
-                          <span className="font-medium">Type:</span>
-                        </div>
-                        <span>{account.type}</span>
-
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">Created:</span>
-                        </div>
-                        <span>{formatDate(account.createdAt)}</span>
+        {/* Accounts Section */}
+        <div className="space-y-4 pt-6 border-t">
+          <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <Banknote className="h-5 w-5" /> 
+            Bank Accounts
+          </h3>
+          
+          {isAccountsLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          ) : selectedUser.accounts && selectedUser.accounts.length > 0 ? (
+            <div className="space-y-4">
+              {selectedUser.accounts.map((account, index) => (
+                <Card key={account.id} className="border border-gray-200">
+                  <div className="p-6">
+                    {/* Account Header */}
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b">
+                      <div className="flex items-center gap-3">
+                        <Wallet className="h-5 w-5 text-muted-foreground" />
+                        <h4 className="font-semibold text-base">{account.accountName}</h4>
                       </div>
-                    </Card>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground text-center py-4">
-                    No accounts found for this user.
-                  </p>
-                )}
-              </div>
+                      <span className="text-sm font-medium px-2 py-1 bg-gray-100 rounded">
+                        {account.status}
+                      </span>
+                    </div>
+
+                    {/* Account Details Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                            <UserIcon className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium">Account Type</span>
+                          </div>
+                          <span className="text-sm font-medium text-right">{account.type}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                            <BanknoteIcon className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium">Bank Name</span>
+                          </div>
+                          <span className="text-sm font-medium text-right">{account.bankName}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                            <Building className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium">Branch</span>
+                          </div>
+                          <span className="text-sm font-medium text-right">{account.branchName}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                            <Currency className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium">Currency</span>
+                          </div>
+                          <span className="text-sm font-medium text-right">{account.currency}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                            <Hash className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium">IFSC Code</span>
+                          </div>
+                          <span className="text-sm font-medium font-mono text-right">{account.ifscCode}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                            <Route className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium">Routing Number</span>
+                          </div>
+                          <span className="text-sm font-medium font-mono text-right">{account.routingNumber}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                            <Calendar className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium">Created Date</span>
+                          </div>
+                          <span className="text-sm font-medium text-right">{formatDate(account.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No bank accounts found for this user.</p>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
     </div>
   );
 }

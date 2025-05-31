@@ -19,6 +19,12 @@ interface PrismaUser {
   accounts: {
     id: string;
     accountName: string;
+    accountNumber: string;
+    accountHolderName: string;
+    routingNumber: string;
+    ifscCode: string;
+    bankName: string;
+    branchName: string;
     accountType: string;
     isDefault: boolean;
     createdAt: Date;
@@ -50,6 +56,12 @@ export async function GET() {
             id: true,
             accountName: true,
             accountType: true,
+            accountNumber: true,
+            accountHolderName: true,
+            routingNumber: true,
+            ifscCode: true,
+            bankName: true,
+            branchName: true,
             isDefault: true,
             createdAt: true,
             updatedAt: true,
@@ -104,6 +116,13 @@ export async function GET() {
           id: account.id,
           accountName: account.accountName,
           accountNumber: account.accountName, // Using accountName as accountNumber since it's not in schema
+          accountHolderName: account.accountHolderName,
+          routingNumber: account.routingNumber,
+          ifscCode: account.ifscCode,
+          bankName: account.bankName,
+          branchName: account.branchName,
+          accountType: account.accountType,
+          isDefault: account.isDefault,
           balance: 0, // Default balance since it's not in the schema
           currency: "USD", // Default currency
           type: account.accountType.toUpperCase() as "SAVINGS" | "CHECKING" | "CREDIT_CARD" | "LOAN" | "UNKNOWN",
