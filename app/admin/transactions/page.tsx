@@ -31,7 +31,7 @@ const statusMapping: Record<TransactionStatus, WalletTransactionStatus> = {
 const COMPLETED_STATUS = WalletTransactionStatus.COMPLETED;
 const REJECTED_STATUS = WalletTransactionStatus.CANCELLED;
 
-import { transferApi } from "@/api/transfer";
+import { transferApi } from "@/api";
 import { toast } from "@/components/ui/use-toast";
 
 export default function AdminTransactionsPage() {

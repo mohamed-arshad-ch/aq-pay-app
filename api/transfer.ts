@@ -1,4 +1,6 @@
-import { WalletTransaction, WalletTransactionStatus, WalletTransactionType } from "@/types";
+"use client";
+
+import type { WalletTransaction, WalletTransactionStatus, WalletTransactionType } from "@/types";
 
 export interface TransferFilters {
   status?: WalletTransactionStatus;
@@ -45,6 +47,58 @@ export interface UpdateTransferStatusRequest {
   date?: string;
 }
 
+const apiClient = {
+  get: async (url: string) => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `HTTP ${response.status}: Request failed`);
+    }
+    return response.json();
+  },
+
+  post: async (url: string, data: any) => {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `HTTP ${response.status}: Request failed`);
+    }
+    return response.json();
+  },
+
+  put: async (url: string, data: any) => {
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `HTTP ${response.status}: Request failed`);
+    }
+    return response.json();
+  },
+
+  delete: async (url: string) => {
+    const response = await fetch(url, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `HTTP ${response.status}: Request failed`);
+    }
+    return response.json();
+  },
+};
+
 export const transferApi = {
   // Get all transactions with optional filtering
   getTransactions: async (filters: TransferFilters = {}): Promise<TransferResponse> => {
@@ -57,62 +111,22 @@ export const transferApi = {
     if (filters.limit) queryParams.append("limit", filters.limit.toString());
     if (filters.offset) queryParams.append("offset", filters.offset.toString());
 
-    const response = await fetch(`/api/transfer?${queryParams.toString()}`);
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `HTTP ${response.status}: Failed to fetch transactions`);
-    }
-    
-    return response.json();
+    return apiClient.get(`/api/transfer?${queryParams.toString()}`);
   },
 
   // Get transaction details by ID
   getTransaction: async (id: string): Promise<{ transaction: WalletTransaction }> => {
-    const response = await fetch(`/api/transfer/${id}`);
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `HTTP ${response.status}: Failed to fetch transaction`);
-    }
-    
-    return response.json();
+    return apiClient.get(`/api/transfer/${id}`);
   },
 
   // Create a new transaction
   createTransaction: async (data: CreateTransferRequest): Promise<{ transaction: WalletTransaction; message: string }> => {
-    const response = await fetch("/api/transfer", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `HTTP ${response.status}: Failed to create transaction`);
-    }
-
-    return response.json();
+    return apiClient.post("/api/transfer", data);
   },
 
   // Update transaction details (admin only)
   updateTransaction: async (id: string, data: UpdateTransferRequest): Promise<{ transaction: WalletTransaction; message: string }> => {
-    const response = await fetch(`/api/transfer/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `HTTP ${response.status}: Failed to update transaction`);
-    }
-
-    return response.json();
+    return apiClient.put(`/api/transfer/${id}`, data);
   },
 
   // Update transaction status (approve/reject)
@@ -122,20 +136,7 @@ export const transferApi = {
     walletUpdated?: boolean;
     newBalance?: number;
   }> => {
-    const response = await fetch(`/api/transfer/${id}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `HTTP ${response.status}: Failed to update transaction status`);
-    }
-
-    return response.json();
+    return apiClient.post(`/api/transfer/${id}`, data);
   },
 
   // Approve transaction
@@ -145,6 +146,8 @@ export const transferApi = {
     walletUpdated?: boolean;
     newBalance?: number;
   }> => {
+    // Dynamic import to avoid circular references
+    const { WalletTransactionStatus } = await import("@/types");
     return transferApi.updateTransactionStatus(id, {
       status: WalletTransactionStatus.COMPLETED,
       adminNote,
@@ -158,6 +161,8 @@ export const transferApi = {
     walletUpdated?: boolean;
     newBalance?: number;
   }> => {
+    // Dynamic import to avoid circular references
+    const { WalletTransactionStatus } = await import("@/types");
     return transferApi.updateTransactionStatus(id, {
       status: WalletTransactionStatus.CANCELLED,
       adminNote,
@@ -166,15 +171,9 @@ export const transferApi = {
 
   // Delete transaction (admin only)
   deleteTransaction: async (id: string): Promise<{ message: string }> => {
-    const response = await fetch(`/api/transfer/${id}`, {
-      method: "DELETE",
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || `HTTP ${response.status}: Failed to delete transaction`);
-    }
-
-    return response.json();
+    return apiClient.delete(`/api/transfer/${id}`);
   },
-}; 
+};
+
+// Default export for CommonJS compatibility
+export default transferApi; 
