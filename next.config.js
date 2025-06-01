@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: '/api/:id',
+        destination: '/api/[id]', // 👈 should be /api/:id automatically
+      },
+    ];
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
