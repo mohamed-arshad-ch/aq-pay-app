@@ -1,9 +1,9 @@
 // Centralized API exports
-export { transferApi } from './transfer';
+export const { transferApi } = require('./transfer');
 export type {
   TransferFilters,
   TransferResponse,
   CreateTransferRequest,
   UpdateTransferRequest,
   UpdateTransferStatusRequest,
-} from './transfer'; 
+} from './transfer.mjs'; 

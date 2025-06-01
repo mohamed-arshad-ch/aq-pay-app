@@ -176,5 +176,3 @@ const transferApi = {
 // Export for ES modules
 export { transferApi };
 
-// Default export for compatibility
-export default transferApi; 
