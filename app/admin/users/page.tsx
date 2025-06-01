@@ -375,7 +375,7 @@ export default function UsersPage() {
                         <Wallet className="h-5 w-5 text-muted-foreground" />
                         <h4 className="font-semibold text-base">{account.accountName}</h4>
                       </div>
-                      <span className="text-sm font-medium px-2 py-1 bg-gray-100 rounded">
+                      <span className="text-sm font-medium px-2 py-1 bg-gray-100 rounded dark:text-gray-900 ">
                         {account.status}
                       </span>
                     </div>
