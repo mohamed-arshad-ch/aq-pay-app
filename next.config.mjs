@@ -9,9 +9,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
-  },
+  output: 'standalone',
+  serverExternalPackages: ['@prisma/client'],
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push({

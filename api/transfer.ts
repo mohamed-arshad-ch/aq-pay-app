@@ -1,5 +1,3 @@
-"use client";
-
 import type { WalletTransaction, WalletTransactionStatus, WalletTransactionType } from "@/types";
 
 export interface TransferFilters {
@@ -99,7 +97,7 @@ const apiClient = {
   },
 };
 
-export const transferApi = {
+const transferApi = {
   // Get all transactions with optional filtering
   getTransactions: async (filters: TransferFilters = {}): Promise<TransferResponse> => {
     const queryParams = new URLSearchParams();
@@ -175,5 +173,8 @@ export const transferApi = {
   },
 };
 
-// Default export for CommonJS compatibility
+// Export for ES modules
+export { transferApi };
+
+// Default export for compatibility
 export default transferApi; 
