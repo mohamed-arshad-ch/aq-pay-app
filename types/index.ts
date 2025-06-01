@@ -247,7 +247,9 @@ export interface WalletTransaction {
   createdAt: string;
   updatedAt: string;
   bankAccountId?: string;
+  bankAccount?: BankAccount;
   adminNote?: string;
+  location?: string;
 }
 
 export enum WalletTransactionType {
