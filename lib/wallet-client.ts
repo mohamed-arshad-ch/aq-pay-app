@@ -29,7 +29,7 @@ const initializeWallet = () => {
 };
 
 // Helper function to get wallet from localStorage
-const getWalletFromStorage = (): Wallet => {
+const getWalletFromStorage = (): Wallet | null => {
   initializeWallet();
   const walletData = localStorage.getItem("wallet");
   return walletData ? JSON.parse(walletData) : null;
@@ -192,4 +192,4 @@ export const getPendingSendTransactions = async (): Promise<
     console.error("Error fetching pending send transactions:", error);
     throw error;
   }
-};
+}; 

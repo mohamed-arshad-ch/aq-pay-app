@@ -11,7 +11,7 @@ import {
   fetchWalletTransactions,
   addWalletBalance, // This API call will now return the PENDING transaction
   sendWalletBalance,
-} from "@/api/wallet";
+} from "@/lib/wallet-client";
 
 interface WalletState {
   wallet: Wallet | null;

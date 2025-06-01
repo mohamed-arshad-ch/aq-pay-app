@@ -171,7 +171,4 @@ export const transferApi = {
   deleteTransaction: async (id: string): Promise<{ message: string }> => {
     return apiClient.delete(`/api/transfer/${id}`);
   },
-};
-
-
-
+}; 

@@ -9,7 +9,7 @@ import {
 import {
   fetchWalletTransactions,
   updateTransactionStatus as apiUpdateTransactionStatus,
-} from "@/api/wallet";
+} from "@/lib/wallet-client";
 import type { WalletTransaction } from "@/types";
 import { WalletTransactionStatus } from "@/types";
 import { formatCurrency } from "@/lib/currency-utils";
