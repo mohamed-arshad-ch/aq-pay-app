@@ -31,10 +31,8 @@ const statusMapping: Record<TransactionStatus, WalletTransactionStatus> = {
 const COMPLETED_STATUS = WalletTransactionStatus.COMPLETED;
 const REJECTED_STATUS = WalletTransactionStatus.CANCELLED;
 
-import { fetchAllWalletTransactions,} from "@/api/wallet";
+import { transferApi } from "@/api/transfer";
 import { toast } from "@/components/ui/use-toast";
-
-import { updateTransactionStatus, getTransactionDetails } from "@/api/wallet";
 
 export default function AdminTransactionsPage() {
   const router = useRouter();
@@ -51,11 +49,11 @@ export default function AdminTransactionsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const result = await fetchAllWalletTransactions();
-        console.log("All wallet transactions:", result);
+        const result = await transferApi.getTransactions();
+        console.log("All wallet transactions:", result.transactions);
         dispatch({
           type: "wallet/setAllTransactions",
-          payload: result,
+          payload: result.transactions,
         });
       } catch (error) {
         console.error("Error fetching transactions:", error);
@@ -90,7 +88,7 @@ export default function AdminTransactionsPage() {
       if (!transaction.id) {
         throw new Error("Invalid transaction ID");
       }
-      await updateTransactionStatus(transaction.id, COMPLETED_STATUS);
+      await transferApi.approveTransaction(transaction.id, "Approved by admin");
       dispatch({
         type: "wallet/updateTransactionStatus",
         payload: { id: transaction.id, status: COMPLETED_STATUS },
@@ -115,7 +113,7 @@ export default function AdminTransactionsPage() {
       if (!transaction.id) {
         throw new Error("Invalid transaction ID");
       }
-      await updateTransactionStatus(transaction.id, REJECTED_STATUS);
+      await transferApi.rejectTransaction(transaction.id, "Rejected by admin");
       dispatch({
         type: "wallet/updateTransactionStatus",
         payload: { id: transaction.id, status: REJECTED_STATUS },
@@ -140,10 +138,9 @@ export default function AdminTransactionsPage() {
       if (!selectedTransaction?.id) {
         throw new Error("Invalid transaction ID");
       }
-      await updateTransactionStatus(selectedTransaction.id, selectedTransaction.status, undefined, {
+      await transferApi.updateTransaction(selectedTransaction.id, {
         amount: editForm.amount,
         description: editForm.description,
-        status: statusMapping[selectedTransaction.status],
       });
       dispatch({
         type: "wallet/updateTransaction",
@@ -175,11 +172,11 @@ export default function AdminTransactionsPage() {
 
   const handleRefresh = async () => {
     try {
-      const result = await fetchAllWalletTransactions();
-      console.log("All wallet transactions (refresh):", result);
+      const result = await transferApi.getTransactions();
+      console.log("All wallet transactions (refresh):", result.transactions);
       dispatch({
         type: "wallet/setAllTransactions",
-        payload: result,
+        payload: result.transactions,
       });
     } catch (error) {
       console.error("Error refreshing transactions:", error);

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency-utils";
 import { format } from "date-fns";
-import { Eye, Copy } from "lucide-react";
+import { Eye, Copy, MoreHorizontal } from "lucide-react";
 import type { Transaction } from "@/types";
 import { TransactionSkeleton } from "./transaction-skeleton";
 import {
@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -38,6 +39,8 @@ export function TransactionTable({
   const [sortField, setSortField] = useState<keyof Transaction>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
+  const router = useRouter();
+
   const handleSort = (field: keyof Transaction) => {
     if (field === sortField) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -52,15 +55,16 @@ export function TransactionTable({
     const bValue = b[sortField];
 
     if (typeof aValue === "string" && typeof bValue === "string") {
+      if (sortField === "date") {
+        const aDate = new Date(aValue);
+        const bDate = new Date(bValue);
+        return sortDirection === "asc"
+          ? aDate.getTime() - bDate.getTime()
+          : bDate.getTime() - aDate.getTime();
+      }
       return sortDirection === "asc"
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue);
-    }
-
-    if (aValue instanceof Date && bValue instanceof Date) {
-      return sortDirection === "asc"
-        ? aValue.getTime() - bValue.getTime()
-        : bValue.getTime() - aValue.getTime();
     }
 
     if (typeof aValue === "number" && typeof bValue === "number") {
@@ -102,6 +106,10 @@ export function TransactionTable({
         duration: 2000,
       });
     }
+  };
+
+  const handleViewDetails = (transactionId: string) => {
+    router.push(`/admin/transactions/${transactionId}`);
   };
 
   if (isLoading) {
@@ -173,15 +181,27 @@ export function TransactionTable({
               <TableCell>{formatCurrency(transaction.amount)}</TableCell>
               <TableCell>{transaction.type}</TableCell>
               <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onViewTransaction(transaction)}
-                >
-                  <Eye className="h-4 w-4" />
-                  <span className="sr-only">View transaction</span>
-                </Button>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewDetails(transaction.id)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span className="sr-only">View details</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewTransaction(transaction)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}

@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  fetchTransactionDetails,
-  updateTransactionStatus,
-  pollTransactionStatus,
-} from "@/store/slices/transactionsSlice";
+import { transferApi } from "@/api/transfer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +11,6 @@ import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import {
   ArrowLeft,
-  User,
-  CreditCard,
-  Calendar,
-  DollarSign,
   AlertCircle,
   Pencil,
   Save,
@@ -28,6 +19,8 @@ import {
   Copy,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import {
   Tooltip,
@@ -35,7 +28,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Transaction } from "@/types";
+import { WalletTransaction, WalletTransactionStatus } from "@/types";
+
+// Extended type for API response that includes user and bankAccount
+interface WalletTransactionWithRelations extends Omit<WalletTransaction, 'bankAccount'> {
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+  bankAccount?: {
+    id: string;
+    accountName: string;
+    accountNumber: string;
+    bankName: string;
+  };
+}
 
 function TransactionDetailsSkeleton() {
   return (
@@ -57,30 +66,6 @@ function TransactionDetailsSkeleton() {
             ))}
           </div>
         </Card>
-
-        <Card className="p-6">
-          <Skeleton className="h-6 w-[200px] mb-4" />
-          <div className="grid grid-cols-2 gap-4">
-            {[1, 2].map((i) => (
-              <div key={i}>
-                <Skeleton className="h-4 w-[100px] mb-2" />
-                <Skeleton className="h-5 w-[150px]" />
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <Skeleton className="h-6 w-[200px] mb-4" />
-          <div className="grid grid-cols-2 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i}>
-                <Skeleton className="h-4 w-[100px] mb-2" />
-                <Skeleton className="h-5 w-[150px]" />
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
     </div>
   );
@@ -88,15 +73,11 @@ function TransactionDetailsSkeleton() {
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return "N/A";
-
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return "Invalid Date";
-    }
+    if (isNaN(date.getTime())) return "Invalid Date";
     return format(date, "PPP p");
   } catch (error) {
-    console.error("Error formatting date:", error);
     return "Invalid Date";
   }
 };
@@ -109,7 +90,6 @@ const copyToClipboard = async (text: string) => {
       duration: 2000,
     });
   } catch (err) {
-    console.error("Failed to copy:", err);
     toast({
       variant: "destructive",
       description: "Failed to copy to clipboard",
@@ -125,15 +105,15 @@ interface TransactionDetailsPageProps {
 export default function TransactionDetailsPage({ params }: TransactionDetailsPageProps) {
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { selectedTransaction: transaction, isLoading, error } = useAppSelector(
-    (state) => state.transactions
-  );
+  const [transaction, setTransaction] = useState<WalletTransactionWithRelations | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false);
   const [editedAmount, setEditedAmount] = useState("");
   const [editedLocation, setEditedLocation] = useState("");
+  const [editedDescription, setEditedDescription] = useState("");
   const [editedTime, setEditedTime] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
@@ -143,7 +123,6 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
   useEffect(() => {
     const resolveParams = async () => {
       try {
-        // Handle both sync and async params
         const resolvedParamsValue = await Promise.resolve(params);
         setResolvedParams(resolvedParamsValue);
       } catch (error) {
@@ -151,40 +130,35 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
         setResolvedParams(null);
       }
     };
-
     resolveParams();
   }, [params]);
 
   // Fetch transaction details
   useEffect(() => {
     if (resolvedParams?.id) {
-      console.log("Fetching transaction details for ID:", resolvedParams.id);
-      dispatch(fetchTransactionDetails(resolvedParams.id))
-        .unwrap()
-        .then((result) => {
-          console.log("Transaction details fetched successfully:", result);
-        })
-        .catch((error) => {
+      const fetchTransaction = async () => {
+        try {
+          setIsLoading(true);
+          setError(null);
+          const result = await transferApi.getTransaction(resolvedParams.id);
+          setTransaction(result.transaction);
+        } catch (error) {
           console.error("Failed to fetch transaction details:", error);
-        });
+          setError(error instanceof Error ? error.message : "Failed to fetch transaction");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchTransaction();
     }
-  }, [resolvedParams?.id, dispatch]);
-
-  // Optional: Poll transaction status for real-time updates
-  useEffect(() => {
-    if (transaction?.status === "PENDING" && transaction?.id) {
-      const interval = setInterval(() => {
-        dispatch(pollTransactionStatus(transaction.id));
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [transaction?.status, transaction?.id, dispatch]);
+  }, [resolvedParams?.id]);
 
   // Initialize edit values when transaction is loaded
   useEffect(() => {
     if (transaction) {
       setEditedAmount(transaction.amount?.toString() || "");
       setEditedLocation(transaction.location || "");
+      setEditedDescription(transaction.description || "");
       
       if (transaction.date) {
         try {
@@ -196,7 +170,6 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
             setEditedTime("");
           }
         } catch (error) {
-          console.error("Error formatting initial date:", error);
           setEditedTime("");
         }
       }
@@ -207,23 +180,16 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
     if (!transaction?.id) return;
     setIsApproving(true);
     try {
-      await dispatch(
-        updateTransactionStatus({
-          id: transaction.id,
-          status: "COMPLETED",
-        })
-      ).unwrap();
+      const result = await transferApi.approveTransaction(transaction.id, "Approved by admin");
+      setTransaction(result.transaction);
       toast({
         title: "Transaction approved",
         description: "The transaction has been approved successfully.",
-        variant: "default",
       });
     } catch (err) {
-      console.error("Error approving transaction:", err);
       toast({
         title: "Error",
-        description:
-          err instanceof Error ? err.message : "Failed to approve transaction",
+        description: err instanceof Error ? err.message : "Failed to approve transaction",
         variant: "destructive",
       });
     } finally {
@@ -235,23 +201,16 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
     if (!transaction?.id) return;
     setIsRejecting(true);
     try {
-      await dispatch(
-        updateTransactionStatus({
-          id: transaction.id,
-          status: "REJECTED",
-        })
-      ).unwrap();
+      const result = await transferApi.rejectTransaction(transaction.id, "Rejected by admin");
+      setTransaction(result.transaction);
       toast({
         title: "Transaction rejected",
         description: "The transaction has been rejected successfully.",
-        variant: "default",
       });
     } catch (err) {
-      console.error("Error rejecting transaction:", err);
       toast({
         title: "Error",
-        description:
-          err instanceof Error ? err.message : "Failed to reject transaction",
+        description: err instanceof Error ? err.message : "Failed to reject transaction",
         variant: "destructive",
       });
     } finally {
@@ -263,42 +222,24 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
     if (!transaction?.id) return;
     setIsUpdating(true);
     try {
-      const response = await fetch(`/api/user/wallet/transactions/${transaction.id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: transaction.status,
-          amount: parseFloat(editedAmount) || transaction.amount,
-          location: editedLocation || transaction.location,
-          date: editedTime || transaction.date,
-        }),
+      const result = await transferApi.updateTransaction(transaction.id, {
+        amount: parseFloat(editedAmount) || transaction.amount,
+        location: editedLocation || transaction.location,
+        description: editedDescription || transaction.description,
+        date: editedTime || transaction.date,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}: Failed to update transaction`);
-      }
-
-      const updatedTransaction = await response.json();
-      console.log("Transaction updated successfully:", updatedTransaction);
       
-      // Refresh the transaction data from the server
-      await dispatch(fetchTransactionDetails(transaction.id)).unwrap();
+      setTransaction(result.transaction);
       setIsEditing(false);
       
       toast({
         title: "Transaction updated",
         description: "The transaction has been updated successfully.",
-        variant: "default",
       });
     } catch (err) {
-      console.error("Error updating transaction:", err);
       toast({
         title: "Error",
-        description:
-          err instanceof Error ? err.message : "Failed to update transaction",
+        description: err instanceof Error ? err.message : "Failed to update transaction",
         variant: "destructive",
       });
     } finally {
@@ -306,12 +247,7 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
     }
   };
 
-  // Show loading while resolving params
-  if (!resolvedParams) {
-    return <TransactionDetailsSkeleton />;
-  }
-
-  if (isLoading) {
+  if (!resolvedParams || isLoading) {
     return <TransactionDetailsSkeleton />;
   }
 
@@ -324,16 +260,10 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
           <p>{error}</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => resolvedParams?.id && dispatch(fetchTransactionDetails(resolvedParams.id))}
-          >
+          <Button variant="outline" onClick={() => window.location.reload()}>
             Retry
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()}
-          >
+          <Button variant="outline" onClick={() => router.back()}>
             Go Back
           </Button>
         </div>
@@ -349,10 +279,7 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
           <h2 className="text-xl font-semibold mb-2">Transaction Not Found</h2>
           <p>The transaction with ID "{resolvedParams.id}" could not be found.</p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={() => router.back()}
-        >
+        <Button variant="outline" onClick={() => router.back()}>
           Go Back
         </Button>
       </div>
@@ -365,12 +292,11 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
         return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>;
       case "PENDING":
         return <Badge className="bg-yellow-500 hover:bg-yellow-600">Pending</Badge>;
+      case "CANCELLED":
       case "REJECTED":
         return <Badge className="bg-red-500 hover:bg-red-600">Rejected</Badge>;
       case "FAILED":
         return <Badge className="bg-red-500 hover:bg-red-600">Failed</Badge>;
-      case "PROCESSING":
-        return <Badge className="bg-blue-500 hover:bg-blue-600">Processing</Badge>;
       default:
         return <Badge className="bg-gray-500 hover:bg-gray-600">{status || "Unknown"}</Badge>;
     }
@@ -381,7 +307,7 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Transaction Details</h1>
         <div className="flex gap-2">
-          {transaction.status === "PENDING" && transaction.type === "DEPOSIT" && (
+          {transaction.status === WalletTransactionStatus.PENDING && (
             <>
               {isEditing ? (
                 <>
@@ -497,6 +423,19 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
                 <p className="font-medium">{transaction.location || "N/A"}</p>
               )}
             </div>
+            <div className="md:col-span-2">
+              <p className="text-sm text-gray-500 mb-1">Description</p>
+              {isEditing ? (
+                <Textarea
+                  value={editedDescription}
+                  onChange={(e) => setEditedDescription(e.target.value)}
+                  placeholder="Enter description"
+                  rows={3}
+                />
+              ) : (
+                <p className="font-medium">{transaction.description || "N/A"}</p>
+              )}
+            </div>
           </div>
         </Card>
 
@@ -541,14 +480,14 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
         )}
 
         {/* Show approve/reject buttons only for pending transactions */}
-        {transaction.status === "PENDING" && !isEditing && (
+        {transaction.status === WalletTransactionStatus.PENDING && !isEditing && (
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Actions</h2>
             <div className="flex gap-4 justify-end">
               <Button
                 variant="destructive"
                 onClick={handleReject}
-                disabled={isLoading || isRejecting || isApproving}
+                disabled={isRejecting || isApproving}
               >
                 {isRejecting ? (
                   <>
@@ -562,7 +501,7 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
               <Button
                 variant="default"
                 onClick={handleApprove}
-                disabled={isLoading || isApproving || isRejecting}
+                disabled={isApproving || isRejecting}
               >
                 {isApproving ? (
                   <>
@@ -579,4 +518,4 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
       </div>
     </div>
   );
-}
+} 
