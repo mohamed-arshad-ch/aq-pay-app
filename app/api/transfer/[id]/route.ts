@@ -51,7 +51,7 @@ export async function GET(
 
     if (!transaction) {
       return NextResponse.json(
-        { error: "Transaction not found" },
+        { error: "Transaction not found " + id  + transaction},
         { status: 404 }
       );
     }
