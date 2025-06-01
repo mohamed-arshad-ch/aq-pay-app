@@ -128,7 +128,7 @@ export const transferApi = {
   },
 
   // Update transaction status (approve/reject)
-  updateTransactionStatus: async (id: string, data: UpdateTransferStatusRequest): Promise<{
+  updateTransactionStatusOld: async (id: string, data: UpdateTransferStatusRequest): Promise<{
     transaction: WalletTransaction;
     message: string;
     walletUpdated?: boolean;
@@ -146,7 +146,7 @@ export const transferApi = {
   }> => {
     // Dynamic import to avoid circular references
     const { WalletTransactionStatus } = await import("@/types");
-    return transferApi.updateTransactionStatus(id, {
+    return transferApi.updateTransactionStatusOld(id, {
       status: WalletTransactionStatus.COMPLETED,
       adminNote,
     });
@@ -161,7 +161,7 @@ export const transferApi = {
   }> => {
     // Dynamic import to avoid circular references
     const { WalletTransactionStatus } = await import("@/types");
-    return transferApi.updateTransactionStatus(id, {
+    return transferApi.updateTransactionStatusOld(id, {
       status: WalletTransactionStatus.CANCELLED,
       adminNote,
     });
@@ -170,5 +170,39 @@ export const transferApi = {
   // Delete transaction (admin only)
   deleteTransaction: async (id: string): Promise<{ message: string }> => {
     return apiClient.delete(`/api/transfer/${id}`);
+  },
+
+  // Update transaction status using the new status endpoint
+  updateTransactionStatus: async (id: string, status: WalletTransactionStatus): Promise<{
+    transaction: WalletTransaction;
+    message: string;
+    walletUpdated?: boolean;
+    newBalance?: number;
+  }> => {
+    return apiClient.post(`/api/transfer/status`, { id, status });
+  },
+
+  // Approve transaction using the new status endpoint
+  approveTransactionNew: async (id: string): Promise<{
+    transaction: WalletTransaction;
+    message: string;
+    walletUpdated?: boolean;
+    newBalance?: number;
+  }> => {
+    // Dynamic import to avoid circular references
+    const { WalletTransactionStatus } = await import("@/types");
+    return transferApi.updateTransactionStatus(id, WalletTransactionStatus.COMPLETED);
+  },
+
+  // Reject transaction using the new status endpoint
+  rejectTransactionNew: async (id: string): Promise<{
+    transaction: WalletTransaction;
+    message: string;
+    walletUpdated?: boolean;
+    newBalance?: number;
+  }> => {
+    // Dynamic import to avoid circular references
+    const { WalletTransactionStatus } = await import("@/types");
+    return transferApi.updateTransactionStatus(id, WalletTransactionStatus.CANCELLED);
   },
 }; 

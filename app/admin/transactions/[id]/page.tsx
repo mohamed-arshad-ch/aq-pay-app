@@ -180,12 +180,21 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
     if (!transaction?.id) return;
     setIsApproving(true);
     try {
-      const result = await transferApi.approveTransaction(transaction.id, "Approved by admin");
+      // Use the new status API endpoint
+      const result = await transferApi.approveTransactionNew(transaction.id);
       setTransaction(result.transaction);
       toast({
         title: "Transaction approved",
-        description: "The transaction has been approved successfully.",
+        description: result.message || "The transaction has been approved successfully.",
       });
+      
+      // Show wallet update message if balance was updated
+      if (result.walletUpdated && result.newBalance !== null) {
+        toast({
+          title: "Wallet Updated",
+          description: `Wallet balance updated to ${formatCurrency(result.newBalance || 0)}`,
+        });
+      }
     } catch (err) {
       toast({
         title: "Error",
@@ -201,11 +210,12 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
     if (!transaction?.id) return;
     setIsRejecting(true);
     try {
-      const result = await transferApi.rejectTransaction(transaction.id, "Rejected by admin");
+      // Use the new status API endpoint
+      const result = await transferApi.rejectTransactionNew(transaction.id);
       setTransaction(result.transaction);
       toast({
         title: "Transaction rejected",
-        description: "The transaction has been rejected successfully.",
+        description: result.message || "The transaction has been rejected successfully.",
       });
     } catch (err) {
       toast({

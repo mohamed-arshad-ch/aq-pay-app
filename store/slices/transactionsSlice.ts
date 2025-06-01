@@ -184,12 +184,12 @@ export const updateTransactionStatus = createAsyncThunk(
   "transactions/updateTransactionStatus",
   async ({ id, status }: { id: string; status: TransactionStatus }, { rejectWithValue }) => {
     try {
-      // Call the appropriate API based on the status
+      // Call the appropriate API based on the status using the new status endpoint
       let response
       if (status === "COMPLETED") {
-        response = await transactionsApi.approveTransaction(id)
-      } else if (status === "REJECTED") {
-        response = await transactionsApi.rejectTransaction(id)
+        response = await transactionsApi.approveTransactionNew(id)
+      } else if (status === "REJECTED" || status === "CANCELLED") {
+        response = await transactionsApi.rejectTransactionNew(id)
       } else if (status === "PENDING") {
         response = await transactionsApi.resetTransaction(id)
       } else {

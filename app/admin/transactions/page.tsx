@@ -88,7 +88,8 @@ export default function AdminTransactionsPage() {
       if (!transaction.id) {
         throw new Error("Invalid transaction ID");
       }
-      await transferApi.approveTransaction(transaction.id, "Approved by admin");
+      // Use the new status API endpoint
+      const result = await transferApi.approveTransactionNew(transaction.id);
       dispatch({
         type: "wallet/updateTransactionStatus",
         payload: { id: transaction.id, status: COMPLETED_STATUS },
@@ -96,8 +97,16 @@ export default function AdminTransactionsPage() {
       setSelectedTransaction(null);
       toast({
         title: "Success",
-        description: "Transaction approved successfully",
+        description: result.message || "Transaction approved successfully",
       });
+      
+      // Show wallet update message if balance was updated
+      if (result.walletUpdated && result.newBalance !== null) {
+        toast({
+          title: "Wallet Updated",
+          description: `Wallet balance updated to ${result.newBalance}`,
+        });
+      }
     } catch (error) {
       console.error("Error approving transaction:", error);
       toast({
@@ -113,7 +122,8 @@ export default function AdminTransactionsPage() {
       if (!transaction.id) {
         throw new Error("Invalid transaction ID");
       }
-      await transferApi.rejectTransaction(transaction.id, "Rejected by admin");
+      // Use the new status API endpoint
+      const result = await transferApi.rejectTransactionNew(transaction.id);
       dispatch({
         type: "wallet/updateTransactionStatus",
         payload: { id: transaction.id, status: REJECTED_STATUS },
@@ -121,7 +131,7 @@ export default function AdminTransactionsPage() {
       setSelectedTransaction(null);
       toast({
         title: "Success",
-        description: "Transaction rejected successfully",
+        description: result.message || "Transaction rejected successfully",
       });
     } catch (error) {
       console.error("Error rejecting transaction:", error);

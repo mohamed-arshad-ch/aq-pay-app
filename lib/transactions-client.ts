@@ -160,4 +160,38 @@ export const transactionsApi = {
     }
     return response.json();
   },
+
+  // Update transaction status using the new status endpoint
+  updateTransactionStatus: async (id: string, status: string): Promise<any> => {
+    console.log("Updating transaction status:", id, status);
+    
+    const response = await fetch("/api/transfer/status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id, status }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Update transaction status error:", errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}: Failed to update transaction status`);
+    }
+
+    const result = await response.json();
+    console.log("Update transaction status result:", result);
+    
+    return result;
+  },
+
+  // Approve transaction using the new status endpoint
+  approveTransactionNew: async (id: string): Promise<any> => {
+    return transactionsApi.updateTransactionStatus(id, "COMPLETED");
+  },
+
+  // Reject transaction using the new status endpoint
+  rejectTransactionNew: async (id: string): Promise<any> => {
+    return transactionsApi.updateTransactionStatus(id, "CANCELLED");
+  },
 }; 
