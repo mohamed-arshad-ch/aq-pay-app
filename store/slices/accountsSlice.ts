@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit"
-import { accountsApi } from "@/api/accounts"
+import { accountsApi } from "@/api"
 import type { BankAccount, Transaction } from "@/types"
 
 interface AccountsState {

@@ -3,7 +3,7 @@ import {
   createAsyncThunk,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import { adminApi } from "@/api/admin";
+import { adminApi } from "@/api";
 
 // Define types
 export interface Permission {

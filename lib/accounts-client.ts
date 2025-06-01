@@ -201,12 +201,12 @@ export const accountsApi = {
     try {
       const response = await fetch(`/api/user/accounts/${id}/transactions`);
       if (!response.ok) {
-        throw new Error("Failed to fetch account transactions");
+        throw new Error("Failed to get account transactions");
       }
       return response.json();
     } catch (error) {
-      // Return empty array for transactions in local storage mode
+      // Fallback to empty array
       return [];
     }
   },
-};
+}; 

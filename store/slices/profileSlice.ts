@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit"
-import { profileApi } from "@/api/profile"
+import { profileApi } from "@/api"
 import type { User } from "@/types"
 
 interface ProfileState {

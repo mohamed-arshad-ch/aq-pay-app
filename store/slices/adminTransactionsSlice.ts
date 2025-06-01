@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit"
-import { adminApi } from "@/api/admin"
+import { adminApi } from "@/api"
 import type { Transaction, TransactionStatus, TransactionType } from "@/types"
 
 export interface TransactionFilter {

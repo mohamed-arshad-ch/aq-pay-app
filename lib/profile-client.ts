@@ -40,66 +40,84 @@ const mockUser = {
       uploadedAt: "2023-01-01T00:00:00.000Z",
     },
   ],
-}
+};
 
 export const profileApi = {
   getUserProfile: async () => {
     try {
-      // In a real app, this would be an API call
-      // const response = await apiClient.get('/profile')
-      // return response.data
-
-      // For development, return mock data
-      return mockUser
+      const response = await fetch("/api/user/profile");
+      if (!response.ok) {
+        throw new Error("Failed to fetch user profile");
+      }
+      return response.json();
     } catch (error) {
-      console.error("Error fetching user profile:", error)
-      throw error
+      console.error("Error fetching user profile:", error);
+      // For development, return mock data
+      return mockUser;
     }
   },
 
   updateUserProfile: async (userData: FormData) => {
     try {
-      // In a real app, this would be an API call
-      // const response = await apiClient.put('/profile', userData)
-      // return response.data
-
+      const response = await fetch("/api/user/profile", {
+        method: "PUT",
+        body: userData,
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update user profile");
+      }
+      return response.json();
+    } catch (error) {
+      console.error("Error updating user profile:", error);
       // For development, return mock data with updates
       return {
         ...mockUser,
         firstName: (userData.get("firstName") as string) || mockUser.firstName,
         lastName: (userData.get("lastName") as string) || mockUser.lastName,
         // Add other fields as needed
-      }
-    } catch (error) {
-      console.error("Error updating user profile:", error)
-      throw error
+      };
     }
   },
 
   updateSecuritySettings: async (data: { type: string; data: any }) => {
     try {
-      // In a real app, this would be an API call
-      // const response = await apiClient.put('/profile/security', data)
-      // return response.data
-
+      const response = await fetch("/api/user/profile/security", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update security settings");
+      }
+      return response.json();
+    } catch (error) {
+      console.error("Error updating security settings:", error);
       // For development, return mock data
       return {
         success: true,
         message: `${data.type} updated successfully`,
         user: mockUser,
-      }
-    } catch (error) {
-      console.error("Error updating security settings:", error)
-      throw error
+      };
     }
   },
 
   updatePreferences: async (preferences: any) => {
     try {
-      // In a real app, this would be an API call
-      // const response = await apiClient.put('/profile/preferences', preferences)
-      // return response.data
-
+      const response = await fetch("/api/user/profile/preferences", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(preferences),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update preferences");
+      }
+      return response.json();
+    } catch (error) {
+      console.error("Error updating preferences:", error);
       // For development, return mock data
       return {
         success: true,
@@ -115,19 +133,22 @@ export const profileApi = {
             ...preferences.appPreferences,
           },
         },
-      }
-    } catch (error) {
-      console.error("Error updating preferences:", error)
-      throw error
+      };
     }
   },
 
   uploadVerificationDocuments: async (formData: FormData) => {
     try {
-      // In a real app, this would be an API call
-      // const response = await apiClient.post('/profile/verification', formData)
-      // return response.data
-
+      const response = await fetch("/api/user/profile/verification", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error("Failed to upload verification documents");
+      }
+      return response.json();
+    } catch (error) {
+      console.error("Error uploading verification documents:", error);
       // For development, return mock data
       return {
         success: true,
@@ -141,13 +162,12 @@ export const profileApi = {
               status: "under_review",
               uploadedAt: new Date().toISOString(),
             },
-            ...mockUser.verificationDocuments.filter((doc) => doc.type !== (formData.get("documentType") as string)),
+            ...mockUser.verificationDocuments.filter(
+              (doc) => doc.type !== (formData.get("documentType") as string)
+            ),
           ],
         },
-      }
-    } catch (error) {
-      console.error("Error uploading verification documents:", error)
-      throw error
+      };
     }
   },
-}
+}; 

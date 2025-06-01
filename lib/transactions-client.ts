@@ -2,7 +2,7 @@ import { Transaction, TransactionStatus } from "@/types";
 
 export const transactionsApi = {
   getTransactions: async (): Promise<Transaction[]> => {
-    const response = await fetch("/api/user/wallet/transactions");
+    const response = await fetch("/api/user/transactions");
     if (!response.ok) {
       throw new Error("Failed to fetch transactions");
     }
@@ -10,7 +10,7 @@ export const transactionsApi = {
   },
 
   getTransaction: async (id: string): Promise<Transaction> => {
-    const response = await fetch(`/api/admin/trans-det/${id}`);
+    const response = await fetch(`/api/user/transactions/${id}`);
     if (!response.ok) {
       throw new Error("Failed to fetch transaction");
     }
@@ -18,7 +18,7 @@ export const transactionsApi = {
   },
 
   createTransaction: async (transactionData: Partial<Transaction>): Promise<Transaction> => {
-    const response = await fetch("/api/user/wallet/transactions", {
+    const response = await fetch("/api/user/transactions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -34,7 +34,7 @@ export const transactionsApi = {
   approveTransaction: async (id: string): Promise<Transaction> => {
     console.log("Approving transaction:", id);
     
-    const response = await fetch(`/api/admin/trans-det/${id}`, {
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -51,14 +51,13 @@ export const transactionsApi = {
     const result = await response.json();
     console.log("Approve transaction result:", result);
     
-    // Return the transaction object directly
     return result;
   },
 
   rejectTransaction: async (id: string): Promise<Transaction> => {
     console.log("Rejecting transaction:", id);
     
-    const response = await fetch(`/api/admin/trans-det/${id}`, {
+    const response = await fetch(`/api/admin/wallet/transactions/${id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -75,7 +74,6 @@ export const transactionsApi = {
     const result = await response.json();
     console.log("Reject transaction result:", result);
     
-    // Return the transaction object directly
     return result;
   },
 
@@ -99,7 +97,6 @@ export const transactionsApi = {
     const result = await response.json();
     console.log("Reset transaction result:", result);
     
-    // Return the transaction object directly
     return result;
   },
 
@@ -123,7 +120,6 @@ export const transactionsApi = {
     const result = await response.json();
     console.log("Update transaction result:", result);
     
-    // Return the transaction object directly
     return result;
   },
 
@@ -143,10 +139,10 @@ export const transactionsApi = {
 
   getTransactionHistory: async (filters?: any): Promise<Transaction[]> => {
     const queryParams = new URLSearchParams(filters).toString();
-    const response = await fetch(`/api/user/wallet/transactions/history?${queryParams}`);
+    const response = await fetch(`/api/user/transactions/history?${queryParams}`);
     if (!response.ok) {
       throw new Error("Failed to fetch transaction history");
     }
     return response.json();
   },
-};
+}; 
