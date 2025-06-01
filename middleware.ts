@@ -9,6 +9,8 @@ const publicPaths = [
   "/auth/reset-password",
   "/api/auth/login",
   "/api/auth/register",
+  "/api/transfer",
+  "/api/transfer/:id",
 ];
 
 export async function middleware(request: NextRequest) {
