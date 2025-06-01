@@ -6,4 +6,4 @@ export type {
   CreateTransferRequest,
   UpdateTransferRequest,
   UpdateTransferStatusRequest,
-} from './transfer.mjs'; 
+} from './transfer.js'; 
