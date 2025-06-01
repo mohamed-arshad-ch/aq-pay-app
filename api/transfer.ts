@@ -97,7 +97,7 @@ const apiClient = {
   },
 };
 
-const transferApi = {
+export const transferApi = {
   // Get all transactions with optional filtering
   getTransactions: async (filters: TransferFilters = {}): Promise<TransferResponse> => {
     const queryParams = new URLSearchParams();
@@ -173,6 +173,5 @@ const transferApi = {
   },
 };
 
-// Export for ES modules
-export { transferApi };
+
 
