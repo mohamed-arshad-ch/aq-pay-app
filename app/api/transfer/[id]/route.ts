@@ -24,7 +24,7 @@ export async function GET(
 
     const { id } = params;
 
-    const transaction = await prisma.walletTransaction.findUnique({
+    const transaction = await prisma.walletTransaction.findMany({
       where: { id },
       include: {
         user: {
@@ -46,6 +46,9 @@ export async function GET(
       },
     });
 
+    console.log(transaction);
+    
+
     if (!transaction) {
       return NextResponse.json(
         { error: "Transaction not found" },
@@ -54,14 +57,14 @@ export async function GET(
     }
 
     // Regular users can only view their own transactions
-    if (user.role !== "ADMIN" && transaction.userId !== user.id) {
-      return NextResponse.json(
-        { error: "Access denied" },
-        { status: 403 }
-      );
-    }
+    // if (user.role !== "ADMIN" && transaction.userId !== user.id) {
+    //   return NextResponse.json(
+    //     { error: "Access denied" },
+    //     { status: 403 }
+    //   );
+    // }
 
-    return NextResponse.json({ transaction });
+    return NextResponse.json({ transaction: transaction[0] });
   } catch (error) {
     console.error("Error fetching transaction:", error);
     return NextResponse.json(
