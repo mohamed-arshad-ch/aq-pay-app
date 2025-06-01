@@ -145,4 +145,19 @@ export const transactionsApi = {
     }
     return response.json();
   },
+
+  // Get transaction details by ID using POST request (new endpoint)
+  getTransactionById: async (id: string): Promise<any> => {
+    const response = await fetch("/api/transfer/transaction", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to fetch transaction details");
+    }
+    return response.json();
+  },
 }; 

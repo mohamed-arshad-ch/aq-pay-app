@@ -10,7 +10,7 @@ const publicPaths = [
   "/api/auth/login",
   "/api/auth/register",
   "/api/transfer",
-  "/api/transfer/:id",
+  "/api/transfer/transaction",
 ];
 
 export async function middleware(request: NextRequest) {

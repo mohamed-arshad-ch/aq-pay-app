@@ -112,9 +112,9 @@ export const transferApi = {
     return apiClient.get(`/api/transfer?${queryParams.toString()}`);
   },
 
-  // Get transaction details by ID
+  // Get transaction details by ID using POST request
   getTransaction: async (id: string): Promise<{ transaction: WalletTransaction }> => {
-    return apiClient.get(`/api/transfer/${id}`);
+    return apiClient.post(`/api/transfer/transaction`, { id });
   },
 
   // Create a new transaction
