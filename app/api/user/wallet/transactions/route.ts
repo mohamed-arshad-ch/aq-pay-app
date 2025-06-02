@@ -29,8 +29,9 @@ export async function GET() {
         ) as user,
         json_build_object(
           'id', ba.id,
-          'accountName', ba."accountName",
+          'accountHolderName', ba."accountHolderName",
           'accountNumber', ba."accountNumber",
+          'ifscCode', ba."ifscCode",
          
         ) as "bankAccount"
       FROM "WalletTransaction" wt
