@@ -8,6 +8,7 @@ interface Transaction {
   id: string;
   userId: string;
   walletId: string;
+  orderId: string;
   amount: number;
   currency: string;
   type: string;
@@ -64,6 +65,7 @@ export async function GET() {
       status: wt.status,
       description: wt.description,
       fee: wt.fee,
+      orderId: wt.orderId,
       bankAccountId: wt.bankAccountId,
       date: wt.date,
       createdAt: wt.createdAt,
