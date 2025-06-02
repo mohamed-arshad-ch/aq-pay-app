@@ -218,9 +218,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           bankAccount: {
             select: {
               id: true,
-              accountName: true,
+              accountHolderName: true,
               accountNumber: true,
-              bankName: true,
+              ifscCode: true,
             },
           },
         },

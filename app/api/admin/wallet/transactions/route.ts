@@ -33,15 +33,13 @@ export async function GET() {
         bankAccount: {
           select: {
             id: true,
-            accountName: true,
+         
             accountNumber: true,
-            bankName: true,
-            accountType: true,
+         
             accountHolderName: true,
-            routingNumber: true,
+          
             ifscCode: true,
-            branchName: true,
-            isDefault: true,
+           
             createdAt: true,
           },
         },
@@ -62,10 +60,10 @@ export async function GET() {
         ...transaction.bankAccount,
         accountNumber: transaction.bankAccount.accountNumber.replace(/(.{4})/g, '$1 ').trim(), // Format account number with spaces
         accountHolderName: transaction.bankAccount.accountHolderName || "N/A",
-        routingNumber: transaction.bankAccount.routingNumber || "N/A",
+        
         ifscCode: transaction.bankAccount.ifscCode || "N/A",
-        branchName: transaction.bankAccount.branchName || "N/A",
-        isDefault: transaction.bankAccount.isDefault,
+        
+        
       } : null,
       amount: transaction.amount.toFixed(2),
       fee: transaction.fee.toFixed(2),
