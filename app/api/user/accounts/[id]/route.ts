@@ -31,6 +31,7 @@ export async function POST(
       );
     }
 
+    // Use the ID from the request body
     const account = await prisma.account.findUnique({
       where: {
         id,
@@ -55,7 +56,24 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ account });
+    // Add debug logging
+    console.log('Found account:', {
+      id: account.id,
+      accountName: account.accountName,
+      accountNumber: account.accountNumber
+    });
+
+    // Ensure we're returning a proper JSON response
+    return NextResponse.json({
+      account: {
+        ...account,
+        // Convert Prisma's Decimal type to string for accountNumber
+        accountNumber: account.accountNumber.toString(),
+        // Convert Prisma's DateTime type to string for createdAt, updatedAt
+        createdAt: account.createdAt?.toISOString(),
+        updatedAt: account.updatedAt?.toISOString(),
+      }
+    });
   } catch (error) {
     console.error("Error fetching account:", error);
     return NextResponse.json(
