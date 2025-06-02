@@ -69,9 +69,9 @@ export async function GET(request: NextRequest) {
         bankAccount: {
           select: {
             id: true,
-            accountName: true,
+            accountHolderName: true,
             accountNumber: true,
-            bankName: true,
+            ifscCode: true,
           },
         },
       },
@@ -188,9 +188,9 @@ export async function POST(request: NextRequest) {
         bankAccount: {
           select: {
             id: true,
-            accountName: true,
+            accountHolderName: true,
             accountNumber: true,
-            bankName: true,
+            ifscCode: true,
           },
         },
       },
@@ -213,9 +213,9 @@ export async function POST(request: NextRequest) {
           bankAccount: {
             select: {
               id: true,
-              accountName: true,
+              accountHolderName: true,
               accountNumber: true,
-              bankName: true,
+              ifscCode: true,
             },
           },
         },
