@@ -19,7 +19,7 @@ interface Transaction {
   createdAt: Date;
   updatedAt: Date;
   location: string | null;
-  bankAccountName?: string;
+  accountHolderName?: string;
 }
 
 export async function GET() {
@@ -51,7 +51,7 @@ export async function GET() {
     // Get both wallet and bank transactions
     const walletTransactions = await prisma.walletTransaction.findMany({
       where: { userId: userData.id },
-      include: { bankAccount: { select: { accountName: true } } },
+      include: { bankAccount: { select: { accountHolderName: true } } },
     });
 
     const transactions: Transaction[] = walletTransactions.map((wt) => ({
@@ -69,7 +69,7 @@ export async function GET() {
       createdAt: wt.createdAt,
       updatedAt: wt.updatedAt,
       location: null,
-      bankAccountName: wt.bankAccount?.accountName,
+      bankAccountName: wt.bankAccount?.accountHolderName,
     }));
 
     if (!Array.isArray(transactions)) {
