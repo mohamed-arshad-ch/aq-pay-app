@@ -31,7 +31,7 @@ export async function GET() {
           'id', ba.id,
           'accountHolderName', ba."accountHolderName",
           'accountNumber', ba."accountNumber",
-          'ifscCode', ba."ifscCode",
+          'ifscCode', ba."ifscCode"
          
         ) as "bankAccount"
       FROM "WalletTransaction" wt
