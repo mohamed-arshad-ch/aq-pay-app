@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
+import { generateOrderId } from "@/lib/utils";
 
 // Get wallet details (No changes here)
 export async function GET() {
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
     // **DO NOT update wallet balance here.**
     const newTransaction = await prisma.walletTransaction.create({
       data: {
+        orderId: generateOrderId(),
         walletId: wallet.id,
         userId: userData.id,
         amount,

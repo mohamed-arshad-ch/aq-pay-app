@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
+import { generateOrderId } from "@/lib/utils";
 import { WalletTransactionStatus, WalletTransactionType } from "@/types";
 
 // GET - List all transactions with optional filtering
@@ -163,6 +164,7 @@ export async function POST(request: NextRequest) {
     // Create transaction
     const transaction = await prisma.walletTransaction.create({
       data: {
+        orderId: generateOrderId(),
         walletId: wallet.id,
         userId: user.id,
         amount,

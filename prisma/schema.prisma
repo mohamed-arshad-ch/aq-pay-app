@@ -53,6 +53,7 @@ model Wallet {
 
 model WalletTransaction {
   id            String   @id @default(cuid())
+  orderId       String   @unique
   walletId      String
   wallet        Wallet   @relation(fields: [walletId], references: [id])
   userId        String
@@ -74,4 +75,5 @@ model WalletTransaction {
   @@index([walletId])
   @@index([userId])
   @@index([bankAccountId])
+  @@index([orderId])
 }

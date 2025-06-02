@@ -21,3 +21,14 @@ export function formatCurrency(amount: number): string {
     currency: "USD",
   }).format(amount);
 }
+
+export function generateOrderId(): string {
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  let result = 'AQ'
+  
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  
+  return result
+}

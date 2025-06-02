@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
+import { generateOrderId } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction([
       prisma.walletTransaction.create({
         data: {
+          orderId: generateOrderId(),
           walletId: wallet.id,
           userId: userData.id,
           amount,

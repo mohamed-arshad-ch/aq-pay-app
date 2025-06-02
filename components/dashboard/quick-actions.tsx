@@ -3,18 +3,17 @@
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowRightLeft, Plus, Bell, CreditCard, BarChart2, Wallet } from "lucide-react"
+import { ArrowRightLeft, Plus, Bell } from "lucide-react"
 import { useAppSelector } from "@/store/hooks"
 import { Badge } from "@/components/ui/badge"
 
 export function QuickActions() {
   const router = useRouter()
   const { unreadNotifications } = useAppSelector((state) => state.dashboard)
-  const { hasUnreadNotifications } = useAppSelector((state) => state.wallet)
 
   const actions = [
     {
-      name: "New Transfer",
+      name: "Transfer",
       icon: ArrowRightLeft,
       onClick: () => router.push("/dashboard/transfer"),
       primary: true,
@@ -26,30 +25,11 @@ export function QuickActions() {
       primary: false,
     },
     {
-      name: "My Wallet",
-      icon: Wallet,
-      onClick: () => router.push("/dashboard/wallet"),
-      primary: false,
-      badge: hasUnreadNotifications ? true : undefined,
-    },
-    {
       name: "Notifications",
       icon: Bell,
       onClick: () => router.push("/dashboard/notifications"),
       primary: false,
       badge: unreadNotifications > 0 ? unreadNotifications : undefined,
-    },
-    {
-      name: "My Cards",
-      icon: CreditCard,
-      onClick: () => router.push("/dashboard/cards"),
-      primary: false,
-    },
-    {
-      name: "Analytics",
-      icon: BarChart2,
-      onClick: () => router.push("/dashboard/analytics"),
-      primary: false,
     },
   ]
 

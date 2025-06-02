@@ -57,8 +57,8 @@ export function DashboardContent() {
       <div className="container px-4 py-6 space-y-6 pb-20">
         <DashboardHeader />
         <DashboardWalletOverview />
-        <RecentTransactions />
         <QuickActions />
+        <RecentTransactions />
       </div>
     </PullToRefresh>
   )
