@@ -44,7 +44,6 @@ export function WalletOverview() {
             <CardTitle>Wallet Balance</CardTitle>
             <CardDescription>Your available funds</CardDescription>
           </div>
-          <WalletStatusBadge status={wallet.status} />
         </div>
       </CardHeader>
       <CardContent>
@@ -52,37 +51,7 @@ export function WalletOverview() {
           {formatCurrency(wallet.balance, wallet.currency)}
         </div>
 
-        {wallet.status !== "ACTIVE" && (
-          <div className="mt-4 bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 mt-0.5" />
-            <div>
-              <p className="font-medium">Wallet Restricted</p>
-              <p className="text-sm">
-                {wallet.status === "SUSPENDED"
-                  ? "Your wallet is currently suspended. Please contact support for assistance."
-                  : "Your wallet is closed. Contact support to reactivate it."}
-              </p>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
-}
-
-function WalletStatusBadge({ status }: { status: WalletStatus }) {
-  switch (status) {
-    case "ACTIVE":
-      return <Badge className="bg-green-500">Active</Badge>;
-    case "SUSPENDED":
-      return (
-        <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-          Suspended
-        </Badge>
-      );
-    case "CLOSED":
-      return <Badge variant="destructive">Closed</Badge>;
-    default:
-      return null;
-  }
 }

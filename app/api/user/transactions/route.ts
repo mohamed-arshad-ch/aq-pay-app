@@ -2,17 +2,24 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
+import { WalletTransaction } from "@prisma/client";
 
 interface Transaction {
   id: string;
+  userId: string;
+  walletId: string;
   amount: number;
   currency: string;
   type: string;
   status: string;
   description: string | null;
-  date: Date;
   fee: number;
   bankAccountId: string | null;
+  date: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  location: string | null;
+  bankAccountName?: string;
 }
 
 export async function GET() {
@@ -42,47 +49,40 @@ export async function GET() {
     }
 
     // Get both wallet and bank transactions
-    const [walletTransactions, bankTransactions] = await Promise.all([
-      prisma.$queryRaw<Transaction[]>`
-        SELECT 
-          wt.*,
-          ba."accountName" as "bankAccountName"
-        FROM "WalletTransaction" wt
-        LEFT JOIN "Account" ba ON wt."bankAccountId" = ba.id
-        WHERE wt."userId" = ${userData.id}
-      `,
-      prisma.$queryRaw<Transaction[]>`
-        SELECT 
-          t.*,
-          fromAccount."accountName" as "fromAccountName",
-          toAccount."accountName" as "toAccountName"
-        FROM "Transaction" t
-        LEFT JOIN "Account" fromAccount ON t."fromAccountId" = fromAccount.id
-        LEFT JOIN "Account" toAccount ON t."toAccountId" = toAccount.id
-        WHERE t."userId" = ${userData.id}
-      `
-    ]);
-
-    // Combine both types of transactions
-    const allTransactions = [...walletTransactions, ...bankTransactions];
-
-    // Sort transactions by date in descending order
-    const sortedTransactions = allTransactions.sort((a, b) => {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    const walletTransactions = await prisma.walletTransaction.findMany({
+      where: { userId: userData.id },
+      include: { bankAccount: { select: { accountName: true } } },
     });
 
-    // Categorize transactions by status
-    // Categorize transactions by status
-    const categorizedTransactions = {
-      all: sortedTransactions,
-      pending: sortedTransactions.filter((t: Transaction) => t.status === "PENDING"),
-      rejected: sortedTransactions.filter((t: Transaction) => t.status === "FAILED"),
-      completed: sortedTransactions.filter((t: Transaction) => t.status === "COMPLETED"),
-    };
+    const transactions: Transaction[] = walletTransactions.map((wt) => ({
+      id: wt.id,
+      userId: userData.id,
+      walletId: wt.walletId,
+      amount: wt.amount,
+      currency: wt.currency,
+      type: wt.type,
+      status: wt.status,
+      description: wt.description,
+      fee: wt.fee,
+      bankAccountId: wt.bankAccountId,
+      date: wt.date,
+      createdAt: wt.createdAt,
+      updatedAt: wt.updatedAt,
+      location: null,
+      bankAccountName: wt.bankAccount?.accountName,
+    }));
 
-    return NextResponse.json(categorizedTransactions);
+    if (!Array.isArray(transactions)) {
+      return new NextResponse("Invalid transaction data", { status: 500 });
+    }
 
-    return NextResponse.json(categorizedTransactions);
+    const sortedTransactions = transactions.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    return NextResponse.json(sortedTransactions, {
+      status: 200
+    });
   } catch (error) {
     console.error("Error fetching transactions:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

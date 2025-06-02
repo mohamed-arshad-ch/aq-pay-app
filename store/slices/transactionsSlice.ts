@@ -2,6 +2,16 @@ import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/tool
 import { transactionsApi } from "@/api"
 import type { Transaction, TransactionStatus } from "@/types"
 
+// Type for the API response which can be either an array or a categorized object
+interface CategorizedTransactions {
+  all: Transaction[]
+  pending: Transaction[]
+  rejected: Transaction[]
+  completed: Transaction[]
+}
+
+type TransactionsResponse = Transaction[] | CategorizedTransactions
+
 interface TransactionDraft {
   fromAccountId: string
   toAccountId: string
@@ -269,8 +279,12 @@ const transactionsSlice = createSlice({
     })
     builder.addCase(fetchTransactions.fulfilled, (state, action) => {
       state.isLoading = false
-      state.transactions = action.payload
-      state.filteredTransactions = applyFilters(action.payload, state.filters)
+      // If we get a categorized object, use the 'all' array, otherwise use the payload directly
+      const transactions = Array.isArray(action.payload) 
+        ? action.payload
+        : (action.payload as CategorizedTransactions).all || []
+      state.transactions = transactions
+      state.filteredTransactions = applyFilters(transactions, state.filters)
     })
     builder.addCase(fetchTransactions.rejected, (state, action) => {
       state.isLoading = false

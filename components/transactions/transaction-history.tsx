@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -52,6 +52,11 @@ import {
 } from "@/types";
 import { format } from "date-fns";
 
+type CombinedTransaction = (Transaction | WalletTransaction) & {
+  _source: 'bank' | 'wallet';
+  _uniqueKey: string;
+};
+
 export function TransactionHistory() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -64,9 +69,6 @@ export function TransactionHistory() {
   } = useAppSelector((state) => state.wallet);
   const { accounts } = useAppSelector((state) => state.accounts);
   const [searchTerm, setSearchTerm] = useState("");
-  const [displayedTransactions, setDisplayedTransactions] = useState<
-    (Transaction | WalletTransaction)[]
-  >([]);
 
   useEffect(() => {
     dispatch(fetchTransactions());
@@ -84,73 +86,135 @@ export function TransactionHistory() {
     }
   }, [error]);
 
-  useEffect(() => {
-    // Combine and filter transactions
-    const seenIds = new Set<string>();
-    const transactionsToFilter: (Transaction | WalletTransaction)[] = [];
+  // Memoized combined and filtered transactions
+  const displayedTransactions = useMemo(() => {
+    // Step 1: Combine all transactions with source tracking and unique keys
+    const combinedTransactions: CombinedTransaction[] = [];
 
-    // Helper function to add transaction if not seen before
-    const addIfUnique = (
-      tx: Transaction | WalletTransaction | null | undefined,
-      prefix: string
-    ) => {
-      if (!tx) return;
-      const key = `${prefix}-${tx.id}`;
-      if (!seenIds.has(key)) {
-        seenIds.add(key);
-        transactionsToFilter.push(tx);
+    // Add bank transactions (already filtered by Redux)
+    filteredTransactions?.forEach((tx: Transaction) => {
+      if (tx) {
+        combinedTransactions.push({
+          ...tx,
+          _source: 'bank',
+          _uniqueKey: `bank-${tx.id}`,
+        });
       }
-    };
-
-    // Add regular transactions
-    filteredTransactions?.forEach((tx: Transaction | null) => {
-      addIfUnique(tx, "bank");
     });
 
     // Add wallet transactions
-    walletTransactions?.forEach((tx: WalletTransaction | null) => {
-      addIfUnique(tx, "wallet");
+    walletTransactions?.forEach((tx: WalletTransaction) => {
+      if (tx) {
+        combinedTransactions.push({
+          ...tx,
+          _source: 'wallet',
+          _uniqueKey: `wallet-${tx.id}`,
+        });
+      }
     });
 
     // Add pending wallet transactions
-    pendingWalletTransactions?.forEach((tx: WalletTransaction | null) => {
-      addIfUnique(tx, "wallet");
+    pendingWalletTransactions?.forEach((tx: WalletTransaction) => {
+      if (tx) {
+        combinedTransactions.push({
+          ...tx,
+          _source: 'wallet',
+          _uniqueKey: `wallet-pending-${tx.id}`,
+        });
+      }
     });
 
-    // Sort by date in descending order (most recent first)
-    transactionsToFilter.sort((a, b) => {
+    // Step 2: Remove duplicates based on unique key
+    const uniqueTransactions = combinedTransactions.reduce((acc, tx) => {
+      if (!acc.some(existing => existing._uniqueKey === tx._uniqueKey)) {
+        acc.push(tx);
+      }
+      return acc;
+    }, [] as CombinedTransaction[]);
+
+    // Step 3: Apply wallet transaction filters (since Redux filters only apply to bank transactions)
+    let filteredWalletTransactions = uniqueTransactions;
+
+    // Apply status filter to wallet transactions
+    if (filter?.status) {
+      filteredWalletTransactions = filteredWalletTransactions.filter((tx) => {
+        if (tx._source === 'wallet') {
+          // Map wallet statuses to transaction statuses
+          const walletTx = tx as WalletTransaction & { _source: 'wallet'; _uniqueKey: string };
+          switch (filter.status) {
+            case TransactionStatus.COMPLETED:
+              return walletTx.status === WalletTransactionStatus.COMPLETED;
+            case TransactionStatus.PENDING:
+              return walletTx.status === WalletTransactionStatus.PENDING;
+            case TransactionStatus.REJECTED:
+              return walletTx.status === WalletTransactionStatus.FAILED;
+            default:
+              return true;
+          }
+        }
+        return true; // Keep bank transactions (already filtered by Redux)
+      });
+    }
+
+    // Apply date range filter to wallet transactions
+    if (filter?.dateRange?.from || filter?.dateRange?.to) {
+      filteredWalletTransactions = filteredWalletTransactions.filter((tx) => {
+        if (tx._source === 'wallet') {
+          const txDate = new Date(tx.date).getTime();
+          
+          if (filter.dateRange?.from) {
+            const fromDate = new Date(filter.dateRange.from).getTime();
+            if (txDate < fromDate) return false;
+          }
+          
+          if (filter.dateRange?.to) {
+            const toDate = new Date(filter.dateRange.to).getTime();
+            if (txDate > toDate) return false;
+          }
+        }
+        return true; // Keep bank transactions (already filtered by Redux)
+      });
+    }
+
+    // Step 4: Apply search term filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filteredWalletTransactions = filteredWalletTransactions.filter((tx) => {
+        if (!tx) return false;
+
+        const isWalletTx = tx._source === 'wallet';
+        
+        // Search in common fields
+        const matchesDescription = tx.description?.toLowerCase().includes(term) || false;
+        const matchesId = tx.id?.toLowerCase().includes(term) || false;
+
+        // Search in transaction-specific fields
+        let matchesAccountName = false;
+        if (!isWalletTx) {
+          const bankTx = tx as Transaction;
+          matchesAccountName = 
+            (bankTx.fromAccountName?.toLowerCase().includes(term) || false) ||
+            (bankTx.toAccountName?.toLowerCase().includes(term) || false);
+        }
+
+        return matchesDescription || matchesId || matchesAccountName;
+      });
+    }
+
+    // Step 5: Sort by date (most recent first)
+    filteredWalletTransactions.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       return dateB - dateA;
     });
 
-    if (searchTerm.trim() === "") {
-      setDisplayedTransactions(transactionsToFilter);
-    } else {
-      const term = searchTerm.toLowerCase();
-      setDisplayedTransactions(
-        transactionsToFilter.filter((tx) => {
-          if (!tx) return false;
-
-          const isWalletTx = "walletId" in tx;
-
-          return (
-            (tx.description && tx.description.toLowerCase().includes(term)) ||
-            (tx.id && tx.id.toLowerCase().includes(term)) ||
-            (!isWalletTx &&
-              ((tx.fromAccountName &&
-                tx.fromAccountName.toLowerCase().includes(term)) ||
-                (tx.toAccountName &&
-                  tx.toAccountName.toLowerCase().includes(term))))
-          );
-        })
-      );
-    }
+    return filteredWalletTransactions;
   }, [
     filteredTransactions,
     walletTransactions,
     pendingWalletTransactions,
     searchTerm,
+    filter,
   ]);
 
   const handleRefresh = async () => {
@@ -443,14 +507,12 @@ export function TransactionHistory() {
             </Card>
           ) : (
             <div className="space-y-2 sm:space-y-3">
-              {displayedTransactions.map((transaction, index) => {
+              {displayedTransactions.map((transaction) => {
                 if (!transaction) return null;
-                const isWalletTransaction = "walletId" in transaction;
+                const isWalletTransaction = transaction._source === 'wallet';
                 return (
                   <Card
-                    key={`${isWalletTransaction ? "wallet-" : "bank-"}${
-                      transaction.id
-                    }-${index}`}
+                    key={transaction._uniqueKey}
                     className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() =>
                       handleViewDetails(transaction.id, isWalletTransaction)
@@ -463,9 +525,9 @@ export function TransactionHistory() {
                             "rounded-full p-1.5 sm:p-2",
                             (
                               isWalletTransaction
-                                ? transaction.type ===
+                                ? (transaction as WalletTransaction).type ===
                                   WalletTransactionType.DEPOSIT
-                                : transaction.type === TransactionType.DEPOSIT
+                                : (transaction as Transaction).type === TransactionType.DEPOSIT
                             )
                               ? "bg-green-100 dark:bg-green-900"
                               : "bg-red-100 dark:bg-red-900"
@@ -473,9 +535,9 @@ export function TransactionHistory() {
                         >
                           {(
                             isWalletTransaction
-                              ? transaction.type ===
+                              ? (transaction as WalletTransaction).type ===
                                 WalletTransactionType.DEPOSIT
-                              : transaction.type === TransactionType.DEPOSIT
+                              : (transaction as Transaction).type === TransactionType.DEPOSIT
                           ) ? (
                             <ArrowDownLeft
                               className={cn(
@@ -503,9 +565,9 @@ export function TransactionHistory() {
                                   "font-medium text-sm sm:text-base",
                                   (
                                     isWalletTransaction
-                                      ? transaction.type ===
+                                      ? (transaction as WalletTransaction).type ===
                                         WalletTransactionType.DEPOSIT
-                                      : transaction.type ===
+                                      : (transaction as Transaction).type ===
                                         TransactionType.DEPOSIT
                                   )
                                     ? "text-green-600 dark:text-green-400"
@@ -514,9 +576,9 @@ export function TransactionHistory() {
                               >
                                 {(
                                   isWalletTransaction
-                                    ? transaction.type ===
+                                    ? (transaction as WalletTransaction).type ===
                                       WalletTransactionType.DEPOSIT
-                                    : transaction.type ===
+                                    : (transaction as Transaction).type ===
                                       TransactionType.DEPOSIT
                                 )
                                   ? "+"
@@ -539,8 +601,8 @@ export function TransactionHistory() {
                             <p className="text-xs text-muted-foreground truncate max-w-[120px]">
                               {isWalletTransaction
                                 ? "Wallet Transaction"
-                                : transaction.fromAccountName ||
-                                  transaction.toAccountName ||
+                                : (transaction as Transaction).fromAccountName ||
+                                  (transaction as Transaction).toAccountName ||
                                   "Unknown Account"}
                             </p>
                           </div>
