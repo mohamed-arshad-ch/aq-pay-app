@@ -257,7 +257,7 @@ export function AccountForm({ id }: AccountFormProps) {
     if (isEditMode) {
       const fetchAccountData = async () => {
         try {
-          const response = await fetch(`/api/user/accounts/${id}`, {
+          const response = await fetch(`/api/user/accounts/details`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

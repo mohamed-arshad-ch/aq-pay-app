@@ -59,7 +59,7 @@ export function AccountDetails({ id }: AccountDetailsProps) {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch(`/api/user/accounts/${id}`, {
+      const response = await fetch(`/api/user/accounts/details`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

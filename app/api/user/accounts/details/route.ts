@@ -1,12 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 
 // Get account details by ID using POST request
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest
 ) {
   try {
     const cookieStore = await cookies();
