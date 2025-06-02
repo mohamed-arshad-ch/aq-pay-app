@@ -173,13 +173,17 @@ export const transferApi = {
   },
 
   // Update transaction status using the new status endpoint
-  updateTransactionStatus: async (id: string, status: WalletTransactionStatus): Promise<{
+  updateTransactionStatus: async (id: string, status: WalletTransactionStatus, transactionId?: string): Promise<{
     transaction: WalletTransaction;
     message: string;
     walletUpdated?: boolean;
     newBalance?: number;
   }> => {
-    return apiClient.post(`/api/transfer/status`, { id, status });
+    const requestData: any = { id, status };
+    if (transactionId) {
+      requestData.transactionId = transactionId;
+    }
+    return apiClient.post(`/api/transfer/status`, requestData);
   },
 
   // Approve transaction using the new status endpoint

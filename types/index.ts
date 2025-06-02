@@ -250,6 +250,7 @@ export interface WalletTransaction {
   bankAccount?: BankAccount;
   adminNote?: string;
   location?: string;
+  transactionId?: string;
 }
 
 export enum WalletTransactionType {
@@ -262,6 +263,7 @@ export enum WalletTransactionType {
 
 export enum WalletTransactionStatus {
   PENDING = "PENDING",
+  PROCESSING = "PROCESSING",
   COMPLETED = "COMPLETED",
   FAILED = "FAILED",
   CANCELLED = "REJECTED",

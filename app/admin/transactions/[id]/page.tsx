@@ -23,6 +23,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -118,6 +126,11 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
   const [isUpdating, setIsUpdating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Modal state for transaction ID input
+  const [showProcessingModal, setShowProcessingModal] = useState(false);
+  const [processingTransactionId, setProcessingTransactionId] = useState("");
 
   // Handle async params
   useEffect(() => {
@@ -257,6 +270,37 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
     }
   };
 
+  const handleProcessing = async () => {
+    if (!transaction?.id || !processingTransactionId.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid transaction ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const result = await transferApi.updateTransactionStatus(transaction.id, WalletTransactionStatus.PROCESSING, processingTransactionId.trim());
+      setTransaction(result.transaction);
+      setShowProcessingModal(false);
+      setProcessingTransactionId("");
+      toast({
+        title: "Transaction updated",
+        description: result.message || "The transaction has been marked as processing.",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to update transaction to processing",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (!resolvedParams || isLoading) {
     return <TransactionDetailsSkeleton />;
   }
@@ -302,6 +346,8 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
         return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>;
       case "PENDING":
         return <Badge className="bg-yellow-500 hover:bg-yellow-600">Pending</Badge>;
+      case "PROCESSING":
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Processing</Badge>;
       case "CANCELLED":
       case "REJECTED":
         return <Badge className="bg-red-500 hover:bg-red-600">Rejected</Badge>;
@@ -433,6 +479,12 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
                 <p className="font-medium">{transaction.location || "N/A"}</p>
               )}
             </div>
+            {transaction.transactionId && (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Processing Transaction ID</p>
+                <p className="font-medium text-blue-600 break-all">{transaction.transactionId}</p>
+              </div>
+            )}
             <div className="md:col-span-2">
               <p className="text-sm text-gray-500 mb-1">Description</p>
               {isEditing ? (
@@ -497,7 +549,7 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
               <Button
                 variant="destructive"
                 onClick={handleReject}
-                disabled={isRejecting || isApproving}
+                disabled={isRejecting || isApproving || isProcessing}
               >
                 {isRejecting ? (
                   <>
@@ -509,9 +561,23 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
                 )}
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setShowProcessingModal(true)}
+                disabled={isApproving || isRejecting || isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Mark as Processing"
+                )}
+              </Button>
+              <Button
                 variant="default"
                 onClick={handleApprove}
-                disabled={isApproving || isRejecting}
+                disabled={isApproving || isRejecting || isProcessing}
               >
                 {isApproving ? (
                   <>
@@ -526,6 +592,53 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
           </Card>
         )}
       </div>
+
+      {/* Transaction ID Modal */}
+      <Dialog open={showProcessingModal} onOpenChange={setShowProcessingModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark Transaction as Processing</DialogTitle>
+            <DialogDescription>
+              Please enter the transaction ID to mark this transaction as processing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="transaction-id">Transaction ID</Label>
+            <Input
+              id="transaction-id"
+              value={processingTransactionId}
+              onChange={(e) => setProcessingTransactionId(e.target.value)}
+              placeholder="Enter transaction ID"
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowProcessingModal(false);
+                setProcessingTransactionId("");
+              }}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleProcessing}
+              disabled={isProcessing || !processingTransactionId.trim()}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Mark as Processing"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

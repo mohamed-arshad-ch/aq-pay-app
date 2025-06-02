@@ -30,6 +30,7 @@ const statusMapping: Record<TransactionStatus, WalletTransactionStatus> = {
 
 const COMPLETED_STATUS = WalletTransactionStatus.COMPLETED;
 const REJECTED_STATUS = WalletTransactionStatus.CANCELLED;
+const PROCESSING_STATUS = WalletTransactionStatus.PROCESSING;
 
 import { transferApi } from "@/api";
 import { toast } from "@/components/ui/use-toast";
@@ -220,13 +221,16 @@ export default function AdminTransactionsPage() {
   };
 
   const pendingTransactions = filteredTransactions.filter(
-    (t: Transaction) => t.status === TransactionStatus.PENDING
+    (t: Transaction) => t.status === WalletTransactionStatus.PENDING
+  );
+  const processingTransactions = filteredTransactions.filter(
+    (t: Transaction) => t.status === WalletTransactionStatus.PROCESSING
   );
   const rejectedTransactions = filteredTransactions.filter(
-    (t: Transaction) => t.status === TransactionStatus.REJECTED
+    (t: Transaction) => t.status === WalletTransactionStatus.CANCELLED
   );
   const completedTransactions = filteredTransactions.filter(
-    (t: Transaction) => t.status === TransactionStatus.COMPLETED
+    (t: Transaction) => t.status === WalletTransactionStatus.COMPLETED
   );
 
   const totalAmount = filteredTransactions.reduce(

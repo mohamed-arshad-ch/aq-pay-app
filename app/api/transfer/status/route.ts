@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, status } = body;
+    const { id, status, transactionId } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -48,13 +48,22 @@ export async function POST(request: NextRequest) {
     const validStatuses = [
       WalletTransactionStatus.COMPLETED,
       WalletTransactionStatus.PENDING,
+      WalletTransactionStatus.PROCESSING,
       WalletTransactionStatus.CANCELLED,
       WalletTransactionStatus.FAILED
     ];
 
     if (!validStatuses.includes(status)) {
       return NextResponse.json(
-        { error: "Invalid status. Must be one of: COMPLETED, PENDING, CANCELLED, FAILED" },
+        { error: "Invalid status. Must be one of: COMPLETED, PENDING, PROCESSING, CANCELLED, FAILED" },
+        { status: 400 }
+      );
+    }
+
+    // If updating to PROCESSING status, transactionId is required
+    if (status === WalletTransactionStatus.PROCESSING && !transactionId) {
+      return NextResponse.json(
+        { error: "Transaction ID is required when updating status to PROCESSING" },
         { status: 400 }
       );
     }
@@ -90,13 +99,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Prepare update data
+    const updateData: any = {
+      status,
+      updatedAt: new Date(),
+    };
+
+    // Add transactionId if provided (for PROCESSING status)
+    if (transactionId) {
+      updateData.transactionId = transactionId;
+    }
+
     // Update transaction status
     const updatedTransaction = await prisma.walletTransaction.update({
       where: { id },
-      data: {
-        status,
-        updatedAt: new Date(),
-      },
+      data: updateData,
       include: {
         user: {
           select: {

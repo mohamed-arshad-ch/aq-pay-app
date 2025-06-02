@@ -20,7 +20,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { formatCurrency } from "@/lib/currency-utils"
 import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react"
-import type { TransactionStatus } from "@/types"
+import { WalletTransactionStatus } from "@/types"
 
 interface TransactionDetailViewProps {
   transactionId: string
@@ -31,7 +31,7 @@ export function TransactionDetailView({ transactionId }: TransactionDetailViewPr
   const dispatch = useAppDispatch()
   const { selectedTransaction, isLoading, error } = useAppSelector((state) => state.transactions)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [statusToUpdate, setStatusToUpdate] = useState<TransactionStatus | null>(null)
+  const [statusToUpdate, setStatusToUpdate] = useState<string | null>(null)
 
   // Fetch transaction details in useEffect instead of during render
   useEffect(() => {
@@ -40,7 +40,7 @@ export function TransactionDetailView({ transactionId }: TransactionDetailViewPr
     }
   }, [dispatch, transactionId, selectedTransaction, isLoading, error])
 
-  const handleStatusUpdate = (status: TransactionStatus) => {
+  const handleStatusUpdate = (status: string) => {
     setStatusToUpdate(status)
     setConfirmDialogOpen(true)
   }
@@ -50,7 +50,7 @@ export function TransactionDetailView({ transactionId }: TransactionDetailViewPr
       dispatch(
         updateTransactionStatus({
           id: selectedTransaction.id,
-          status: statusToUpdate,
+          status: statusToUpdate as any,
         }),
       )
     }
@@ -63,25 +63,27 @@ export function TransactionDetailView({ transactionId }: TransactionDetailViewPr
         return <Badge className="bg-green-100 text-green-800">Completed</Badge>
       case "PENDING":
         return <Badge className="bg-amber-100 text-amber-800">Pending</Badge>
+      case "PROCESSING":
+        return <Badge className="bg-blue-100 text-blue-800">Processing</Badge>
       case "REJECTED":
         return <Badge className="bg-red-100 text-red-800">Rejected</Badge>
       case "FAILED":
         return <Badge className="bg-red-100 text-red-800">Failed</Badge>
-      case "PROCESSING":
-        return <Badge className="bg-blue-100 text-blue-800">Processing</Badge>
       default:
         return <Badge>{status}</Badge>
     }
   }
 
-  const getStatusActionText = (status: TransactionStatus) => {
+  const getStatusActionText = (status: string) => {
     switch (status) {
-      case "COMPLETED":
+      case WalletTransactionStatus.COMPLETED:
         return "approve"
-      case "REJECTED":
+      case WalletTransactionStatus.CANCELLED:
         return "reject"
-      case "PENDING":
+      case WalletTransactionStatus.PENDING:
         return "mark as pending"
+      case WalletTransactionStatus.PROCESSING:
+        return "mark as processing"
       default:
         return "update"
     }
@@ -265,16 +267,16 @@ export function TransactionDetailView({ transactionId }: TransactionDetailViewPr
             <CardContent className="space-y-4">
               <Button
                 className="w-full bg-green-600 hover:bg-green-700"
-                onClick={() => handleStatusUpdate("COMPLETED")}
-                disabled={selectedTransaction.status === "COMPLETED"}
+                onClick={() => handleStatusUpdate(WalletTransactionStatus.COMPLETED)}
+                disabled={selectedTransaction.status === WalletTransactionStatus.COMPLETED}
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Mark as Completed
               </Button>
               <Button
                 className="w-full bg-red-600 hover:bg-red-700"
-                onClick={() => handleStatusUpdate("REJECTED")}
-                disabled={selectedTransaction.status === "REJECTED"}
+                onClick={() => handleStatusUpdate(WalletTransactionStatus.CANCELLED)}
+                disabled={selectedTransaction.status === WalletTransactionStatus.CANCELLED}
               >
                 <XCircle className="mr-2 h-4 w-4" />
                 Reject Transaction
@@ -282,11 +284,20 @@ export function TransactionDetailView({ transactionId }: TransactionDetailViewPr
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => handleStatusUpdate("PENDING")}
-                disabled={selectedTransaction.status === "PENDING"}
+                onClick={() => handleStatusUpdate(WalletTransactionStatus.PENDING)}
+                disabled={selectedTransaction.status === WalletTransactionStatus.PENDING}
               >
                 <Clock className="mr-2 h-4 w-4" />
                 Mark as Pending
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                onClick={() => handleStatusUpdate(WalletTransactionStatus.PROCESSING)}
+                disabled={selectedTransaction.status === WalletTransactionStatus.PROCESSING}
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                Mark as Processing
               </Button>
             </CardContent>
             <CardFooter>
@@ -303,7 +314,7 @@ export function TransactionDetailView({ transactionId }: TransactionDetailViewPr
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to {getStatusActionText(statusToUpdate as TransactionStatus)} this transaction? This
+              Are you sure you want to {getStatusActionText(statusToUpdate as string)} this transaction? This
               action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
