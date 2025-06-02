@@ -20,7 +20,6 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { BankIcon } from "@/components/accounts/bank-icon";
-import { formatCurrency } from "@/lib/currency-utils";
 
 interface AccountCardProps {
   account: BankAccount;
@@ -49,8 +48,26 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
     e.stopPropagation();
   };
 
-  // Generate a gradient based on the bank name for visual variety
-  const getCardGradient = (bankName: string) => {
+  // Extract bank name from IFSC code (first 4 characters)
+  const getBankNameFromIFSC = (ifscCode: string) => {
+    const bankCode = ifscCode.substring(0, 4);
+    const bankNames: { [key: string]: string } = {
+      'HDFC': 'HDFC Bank',
+      'ICIC': 'ICICI Bank',
+      'SBIN': 'State Bank of India',
+      'AXIS': 'Axis Bank',
+      'KOTK': 'Kotak Mahindra Bank',
+      'YESB': 'Yes Bank',
+      'PUNB': 'Punjab National Bank',
+      'UBIN': 'Union Bank of India',
+      'BARB': 'Bank of Baroda',
+      'CNRB': 'Canara Bank',
+    };
+    return bankNames[bankCode] || `${bankCode} Bank`;
+  };
+
+  // Generate a gradient based on the bank code for visual variety
+  const getCardGradient = (ifscCode: string) => {
     const gradients = [
       "bg-gradient-to-r from-blue-600 to-blue-400",
       "bg-gradient-to-r from-purple-600 to-purple-400",
@@ -59,19 +76,22 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
       "bg-gradient-to-r from-amber-600 to-amber-400",
     ];
 
-    // Use a hash of the bank name to select a consistent gradient
-    const hash = bankName
+    // Use a hash of the bank code to select a consistent gradient
+    const hash = ifscCode
+      .substring(0, 4)
       .split("")
       .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return gradients[hash % gradients.length];
   };
+
+  const bankName = getBankNameFromIFSC(account.ifscCode);
 
   return (
     <div className="p-[3px] sm:p-[4px] md:p-[5px] w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300">
       <div
         className={cn(
           "relative rounded-xl overflow-hidden shadow-lg transition-all hover:shadow-xl",
-          getCardGradient(account.bankName),
+          getCardGradient(account.ifscCode),
           onClick && "cursor-pointer"
         )}
         onClick={onClick}
@@ -83,8 +103,8 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
         <div className="h-48 sm:h-52 md:h-56 lg:h-60 w-full p-4 sm:p-5 md:p-6 text-white relative flex flex-col justify-between">
           <div className="flex justify-between items-start mb-3 sm:mb-4">
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm opacity-80 truncate">{account.bankName}</p>
-              <h3 className="font-bold text-sm sm:text-base md:text-lg mt-1 truncate">{account.accountName}</h3>
+              <p className="text-xs sm:text-sm opacity-80 truncate">{bankName}</p>
+              <h3 className="font-bold text-sm sm:text-base md:text-lg mt-1 truncate">{account.accountHolderName}</h3>
             </div>
             <div onClick={handleShareClick} className="ml-2 flex-shrink-0">
               <DropdownMenu>
@@ -109,7 +129,7 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
           </div>
 
           <div className="mt-4 sm:mt-6">
-            <p className="text-xs sm:text-sm opacity-80">Card Number</p>
+            <p className="text-xs sm:text-sm opacity-80">Account Number</p>
             <p className="font-mono text-sm sm:text-base md:text-lg tracking-wider break-all sm:break-normal">
               {formatAccountNumber(account.accountNumber)}
             </p>
@@ -117,13 +137,9 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
 
           <div className="mt-4 sm:mt-6 flex justify-between items-end">
             <div className="flex-1">
-              {/* Balance could be shown here if needed */}
+              <p className="text-xs sm:text-sm opacity-80">IFSC Code</p>
+              <p className="font-mono text-xs sm:text-sm">{account.ifscCode}</p>
             </div>
-            {account.isDefault && (
-              <div className="bg-white/20 px-2 py-1 rounded text-xs font-medium flex-shrink-0">
-                Default
-              </div>
-            )}
           </div>
         </div>
 

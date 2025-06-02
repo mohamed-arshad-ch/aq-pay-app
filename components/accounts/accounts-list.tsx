@@ -73,8 +73,12 @@ export function AccountsList() {
   const confirmDelete = async () => {
     if (accountToDelete) {
       try {
-        const response = await fetch(`/api/user/accounts/${accountToDelete}`, {
-          method: "DELETE",
+        const response = await fetch(`/api/user/accounts/details`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ action: "delete", id: accountToDelete }),
         });
 
         if (!response.ok) {

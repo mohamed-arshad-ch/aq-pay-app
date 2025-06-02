@@ -30,12 +30,12 @@ export const fetchAccounts = createAsyncThunk("accounts/fetchAccounts", async (_
 
 export const fetchAccount = createAsyncThunk("accounts/fetchAccount", async (id: string, { rejectWithValue }) => {
   try {
-    const response = await fetch(`/api/user/accounts/${id}`, {
+    const response = await fetch("/api/user/accounts/details", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ action: "get", id }),
     });
     if (!response.ok) {
       throw new Error("Failed to fetch account details");
@@ -171,13 +171,6 @@ const accountsSlice = createSlice({
     builder.addCase(addAccount.fulfilled, (state, action) => {
       state.isLoading = false
       state.accounts.push(action.payload)
-
-      // If this is the first account or it's set as default, update other accounts
-      if (action.payload.isDefault) {
-        state.accounts = state.accounts.map((account) =>
-          account.id !== action.payload.id ? { ...account, isDefault: false } : account,
-        )
-      }
     })
     builder.addCase(addAccount.rejected, (state, action) => {
       state.isLoading = false
@@ -226,19 +219,8 @@ const accountsSlice = createSlice({
     })
     builder.addCase(setDefaultAccount.fulfilled, (state, action) => {
       state.isLoading = false
-      // Update all accounts to set isDefault to false except the one being set as default
-      state.accounts = state.accounts.map((account) => ({
-        ...account,
-        isDefault: account.id === action.payload.id,
-      }))
-
-      // Update selectedAccount if it exists
-      if (state.selectedAccount) {
-        state.selectedAccount = {
-          ...state.selectedAccount,
-          isDefault: state.selectedAccount.id === action.payload.id,
-        }
-      }
+      // Since we removed the isDefault field, just update the selected account
+      state.selectedAccount = action.payload
     })
     builder.addCase(setDefaultAccount.rejected, (state, action) => {
       state.isLoading = false

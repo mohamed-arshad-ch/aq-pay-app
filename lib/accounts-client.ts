@@ -34,7 +34,13 @@ export const accountsApi = {
 
   getAccount: async (id: string): Promise<BankAccount> => {
     try {
-      const response = await fetch(`/api/user/accounts/${id}`);
+      const response = await fetch("/api/user/accounts/details", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "get", id }),
+      });
       if (!response.ok) {
         throw new Error("Account not found");
       }
@@ -71,18 +77,9 @@ export const accountsApi = {
       const newAccount: BankAccount = {
         id: crypto.randomUUID(),
         ...accountData,
-        balance: 0,
-        currency: "USD",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as BankAccount;
-
-      // If this is the first account or it's set as default, update other accounts
-      if (newAccount.isDefault) {
-        accounts.forEach((account) => {
-          account.isDefault = false;
-        });
-      }
 
       accounts.push(newAccount);
       setStoredAccounts(accounts);
@@ -95,12 +92,12 @@ export const accountsApi = {
     accountData: Partial<BankAccount>
   ): Promise<BankAccount> => {
     try {
-      const response = await fetch(`/api/user/accounts/${id}`, {
-        method: "PATCH",
+      const response = await fetch("/api/user/accounts/details", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(accountData),
+        body: JSON.stringify({ action: "update", id, ...accountData }),
       });
       if (!response.ok) {
         throw new Error("Failed to update account");
@@ -120,15 +117,6 @@ export const accountsApi = {
         updatedAt: new Date().toISOString(),
       };
 
-      // If setting as default, update other accounts
-      if (accountData.isDefault) {
-        accounts.forEach((account) => {
-          if (account.id !== id) {
-            account.isDefault = false;
-          }
-        });
-      }
-
       accounts[index] = updatedAccount;
       setStoredAccounts(accounts);
       return updatedAccount;
@@ -137,8 +125,12 @@ export const accountsApi = {
 
   deleteAccount: async (id: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/user/accounts/${id}`, {
-        method: "DELETE",
+      const response = await fetch("/api/user/accounts/details", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "delete", id }),
       });
       if (!response.ok) {
         throw new Error("Failed to delete account");
@@ -153,11 +145,17 @@ export const accountsApi = {
 
   setDefaultAccount: async (id: string): Promise<BankAccount> => {
     try {
-      const response = await fetch(`/api/user/accounts/${id}/default`, {
+      // Since we removed the isDefault field, we'll just return the account
+      // This functionality may need to be removed or reimplemented
+      const response = await fetch("/api/user/accounts/details", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "get", id }),
       });
       if (!response.ok) {
-        throw new Error("Failed to set default account");
+        throw new Error("Failed to get account");
       }
       return response.json();
     } catch (error) {
@@ -167,45 +165,25 @@ export const accountsApi = {
       if (!account) {
         throw new Error("Account not found");
       }
-
-      // Update all accounts
-      const updatedAccounts = accounts.map((acc) => ({
-        ...acc,
-        isDefault: acc.id === id,
-      }));
-
-      setStoredAccounts(updatedAccounts);
-      return { ...account, isDefault: true };
+      return account;
     }
   },
 
   getAccountBalance: async (id: string): Promise<{ balance: number }> => {
     try {
-      const response = await fetch(`/api/user/accounts/${id}/balance`);
-      if (!response.ok) {
-        throw new Error("Failed to get account balance");
-      }
-      return response.json();
+      // Since we removed the balance field, return 0 or implement wallet balance check
+      return { balance: 0 };
     } catch (error) {
-      // Fallback to local storage
-      const accounts = getStoredAccounts();
-      const account = accounts.find((acc) => acc.id === id);
-      if (!account) {
-        throw new Error("Account not found");
-      }
-      return { balance: account.balance };
+      return { balance: 0 };
     }
   },
 
   getAccountTransactions: async (id: string): Promise<Transaction[]> => {
     try {
-      const response = await fetch(`/api/user/accounts/${id}/transactions`);
-      if (!response.ok) {
-        throw new Error("Failed to get account transactions");
-      }
-      return response.json();
+      // This would need to be implemented in the wallet transactions API
+      // For now, return empty array
+      return [];
     } catch (error) {
-      // Fallback to empty array
       return [];
     }
   },
