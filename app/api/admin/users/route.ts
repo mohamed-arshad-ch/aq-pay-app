@@ -167,10 +167,8 @@ export async function GET() {
          
           ifscCode: account.ifscCode,
          
-          balance: 0, // Default balance since it's not in the schema
-          currency: "USD", // Default currency
-          type: account.accountType.toUpperCase() as "SAVINGS" | "CHECKING" | "CREDIT_CARD" | "LOAN" | "UNKNOWN",
-          status: account.isDefault ? "ACTIVE" : "PENDING",
+         
+         
           createdAt: account.createdAt.toISOString(),
           updatedAt: account.updatedAt.toISOString(),
         })),

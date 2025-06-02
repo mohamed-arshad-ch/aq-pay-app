@@ -12,8 +12,7 @@ export interface Account {
 
   ifscCode: string;
  
- // Example types, added UNKNOWN for safety
-  status: "ACTIVE" | "CLOSED" | "PENDING"; // Example statuses
+ 
   createdAt: string; // Ensure this is a string as it comes from JSON
 
 }
@@ -32,8 +31,8 @@ export interface Transaction {
   location: string | null;
   bankAccount: {
     id: string;
-    accountName: string;
-    bankName: string;
+    accountHolderName: string;
+    ifscCode: string;
   } | null;
 }
 
