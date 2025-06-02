@@ -30,10 +30,19 @@ export const fetchAccounts = createAsyncThunk("accounts/fetchAccounts", async (_
 
 export const fetchAccount = createAsyncThunk("accounts/fetchAccount", async (id: string, { rejectWithValue }) => {
   try {
-    const response = await accountsApi.getAccount(id)
-    return response
+    const response = await fetch(`/api/user/accounts/${id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to fetch account details");
+    }
+    return await response.json();
   } catch (error) {
-    return rejectWithValue("Failed to fetch account details")
+    return rejectWithValue("Failed to fetch account details");
   }
 })
 

@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 
-// Get a specific account
-export async function GET(
+// Get account details by ID using POST request
+export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
@@ -21,22 +21,45 @@ export async function GET(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Account ID is required" },
+        { status: 400 }
+      );
+    }
+
     const account = await prisma.account.findUnique({
       where: {
-        id: params.id,
+        id,
         userId: userData.id,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
       },
     });
 
     if (!account) {
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Account not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(account);
+    return NextResponse.json({ account });
   } catch (error) {
     console.error("Error fetching account:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to fetch account" },
       { status: 500 }
     );
   }
@@ -74,12 +97,36 @@ export async function PUT(
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
+    // If setting as default, unset other default accounts for the user
+    if (data.isDefault === true) {
+      await prisma.account.updateMany({
+        where: {
+          userId: userData.id,
+          isDefault: true,
+          id: { not: params.id },
+        },
+        data: {
+          isDefault: false,
+        },
+      });
+    }
+
     // Update the account
     const updatedAccount = await prisma.account.update({
       where: {
         id: params.id,
       },
-      data,
+      data: {
+        isDefault: data.isDefault,
+        // Include other fields that can be updated
+        ...(data.accountName && { accountName: data.accountName }),
+        ...(data.accountType && { accountType: data.accountType }),
+        ...(data.accountHolderName && { accountHolderName: data.accountHolderName }),
+        ...(data.ifscCode && { ifscCode: data.ifscCode }),
+        ...(data.routingNumber && { routingNumber: data.routingNumber }),
+        ...(data.branchName && { branchName: data.branchName }),
+        ...(data.currency && { currency: data.currency }),
+      },
     });
 
     return NextResponse.json(updatedAccount);

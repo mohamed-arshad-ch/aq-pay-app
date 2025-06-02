@@ -234,7 +234,6 @@ interface AccountFormProps {
 export function AccountForm({ id }: AccountFormProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { selectedAccount, error } = useAppSelector((state) => state.accounts);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const isEditMode = !!id;
@@ -258,7 +257,13 @@ export function AccountForm({ id }: AccountFormProps) {
     if (isEditMode) {
       const fetchAccountData = async () => {
         try {
-          const response = await fetch(`/api/user/accounts/${id}`);
+          const response = await fetch(`/api/user/accounts/${id}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id }),
+          });
           if (!response.ok) {
             throw new Error("Failed to fetch account");
           }
@@ -292,14 +297,8 @@ export function AccountForm({ id }: AccountFormProps) {
   }, [form, isEditMode, id]);
 
   useEffect(() => {
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error,
-      });
-    }
-  }, [error]);
+    // We removed the Redux store dependency, so this useEffect is no longer needed
+  }, []);
 
   const onSubmit = async (data: AccountFormValues) => {
     try {
@@ -362,10 +361,10 @@ export function AccountForm({ id }: AccountFormProps) {
   };
 
   const handleDelete = async () => {
-    if (isEditMode && selectedAccount) {
+    if (isEditMode && id) {
       try {
         const response = await fetch(
-          `/api/user/accounts/${selectedAccount.id}`,
+          `/api/user/accounts/${id}`,
           {
             method: "DELETE",
           }

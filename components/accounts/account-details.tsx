@@ -11,6 +11,8 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,20 +49,34 @@ export function AccountDetails({ id }: AccountDetailsProps) {
   const router = useRouter();
   const [account, setAccount] = useState<BankAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]); // You can define a proper Transaction type
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingDefault, setIsUpdatingDefault] = useState(false);
 
   const fetchAccountDetails = async () => {
     try {
-      const response = await fetch(`/api/user/accounts/${id}`);
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch(`/api/user/accounts/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+
       if (!response.ok) {
-        throw new Error("Failed to fetch account details");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch account details");
       }
+
       const data = await response.json();
-      setAccount(data);
+      setAccount(data.account);
     } catch (error) {
       console.error("Error fetching account details:", error);
+      setError(error instanceof Error ? error.message : "Failed to fetch account details");
       toast({
         variant: "destructive",
         title: "Error",
@@ -137,10 +153,53 @@ export function AccountDetails({ id }: AccountDetailsProps) {
     }
   };
 
+  const handleToggleDefault = async (newDefaultStatus: boolean) => {
+    if (!account) return;
+    
+    try {
+      setIsUpdatingDefault(true);
+      const response = await fetch(`/api/user/accounts/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          isDefault: newDefaultStatus 
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update default status");
+      }
+
+      // Update local state
+      setAccount(prev => prev ? { ...prev, isDefault: newDefaultStatus } : null);
+      
+      toast({
+        title: newDefaultStatus ? "Set as default account" : "Removed as default account",
+        description: newDefaultStatus 
+          ? "This account is now your default account." 
+          : "This account is no longer your default account.",
+      });
+    } catch (error) {
+      console.error("Error updating default status:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update default status. Please try again.",
+      });
+    } finally {
+      setIsUpdatingDefault(false);
+    }
+  };
+
+  // Early return for loading state
   if (isLoading || !account) {
     return <AccountDetailsSkeleton />;
   }
 
+  // Main component return
   return (
     <div className="container max-w-2xl mx-auto px-4 py-6 pb-20">
       <div className="flex items-center gap-2 mb-6">
@@ -233,6 +292,28 @@ export function AccountDetails({ id }: AccountDetailsProps) {
                   <p className="text-sm text-muted-foreground">Currency</p>
                   <p className="font-medium">{account.currency || "USD"}</p>
                 </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label 
+                    htmlFor="default-toggle" 
+                    className="text-sm font-medium"
+                  >
+                    Default Account
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Use this account as your primary account for transfers
+                  </p>
+                </div>
+                <Switch
+                  id="default-toggle"
+                  checked={account.isDefault}
+                  onCheckedChange={handleToggleDefault}
+                  disabled={isUpdatingDefault}
+                />
               </div>
             </div>
           </CardContent>

@@ -67,7 +67,7 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
   };
 
   return (
-    <div className="p-[1px] rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300">
+    <div className="p-[3px] sm:p-[4px] md:p-[5px] w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300">
       <div
         className={cn(
           "relative rounded-xl overflow-hidden shadow-lg transition-all hover:shadow-xl",
@@ -80,17 +80,17 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
         <div className="absolute inset-0 opacity-30 bg-gradient-to-br from-white/20 to-transparent" />
 
         {/* Card content */}
-        <div className="p-6 text-white relative">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm opacity-80">{account.bankName}</p>
-              <h3 className="font-bold text-lg mt-1">{account.accountName}</h3>
+        <div className="h-48 sm:h-52 md:h-56 lg:h-60 w-full p-4 sm:p-5 md:p-6 text-white relative flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-3 sm:mb-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm opacity-80 truncate">{account.bankName}</p>
+              <h3 className="font-bold text-sm sm:text-base md:text-lg mt-1 truncate">{account.accountName}</h3>
             </div>
-            <div onClick={handleShareClick}>
+            <div onClick={handleShareClick} className="ml-2 flex-shrink-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
-                    <Share2 className="h-4 w-4 text-white" />
+                  <button className="p-1.5 sm:p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+                    <Share2 className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -108,25 +108,28 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
             </div>
           </div>
 
-          <div className="mt-6">
-            <p className="text-sm opacity-80">Card Number</p>
-            <p className="font-mono text-lg tracking-wider">
+          <div className="mt-4 sm:mt-6">
+            <p className="text-xs sm:text-sm opacity-80">Card Number</p>
+            <p className="font-mono text-sm sm:text-base md:text-lg tracking-wider break-all sm:break-normal">
               {formatAccountNumber(account.accountNumber)}
             </p>
           </div>
 
-          <div className="mt-6 flex justify-end items-end">
+          <div className="mt-4 sm:mt-6 flex justify-between items-end">
+            <div className="flex-1">
+              {/* Balance could be shown here if needed */}
+            </div>
             {account.isDefault && (
-              <div className="bg-white/20 px-2 py-1 rounded text-xs font-medium">
+              <div className="bg-white/20 px-2 py-1 rounded text-xs font-medium flex-shrink-0">
                 Default
               </div>
             )}
           </div>
         </div>
 
-        {/* Card chip design - updated with better styling */}
-        <div className="absolute top-6 right-6">
-          <div className="w-12 h-9 rounded-md bg-gradient-to-br from-yellow-300 to-yellow-400 border border-yellow-500/30 shadow-inner grid grid-cols-3 grid-rows-3 gap-[1px] p-[2px]">
+        {/* Card chip design - responsive sizing */}
+        <div className="absolute top-4 sm:top-5 md:top-6 right-4 sm:right-5 md:right-6">
+          <div className="w-8 h-6 sm:w-10 sm:h-7 md:w-12 md:h-9 rounded-md bg-gradient-to-br from-yellow-300 to-yellow-400 border border-yellow-500/30 shadow-inner grid grid-cols-3 grid-rows-3 gap-[1px] p-[1px] sm:p-[2px]">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="bg-yellow-600/30 rounded-[1px]" />
             ))}
