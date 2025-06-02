@@ -9,16 +9,10 @@ export interface Account {
   id: string;
   accountNumber: string;
   accountHolderName: string;
-  accountName: string;
-  routingNumber: string;
+
   ifscCode: string;
-  bankName: string;
-  branchName: string;
-  accountType: string;
-  isDefault: boolean;
-  balance: number;
-  currency: string; // Add currency to the Account interface
-  type: "SAVINGS" | "CHECKING" | "CREDIT_CARD" | "LOAN" | "UNKNOWN"; // Example types, added UNKNOWN for safety
+ 
+ // Example types, added UNKNOWN for safety
   status: "ACTIVE" | "CLOSED" | "PENDING"; // Example statuses
   createdAt: string; // Ensure this is a string as it comes from JSON
 

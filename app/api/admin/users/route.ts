@@ -44,8 +44,8 @@ interface PrismaUser {
     location: string | null;
     bankAccount: {
       id: string;
-      accountName: string;
-      bankName: string;
+      accountHolderName: string;
+      ifscCode: string;
     } | null;
   }[];
 }
@@ -72,15 +72,15 @@ export async function GET() {
         accounts: {
           select: {
             id: true,
-            accountName: true,
-            accountType: true,
+        
+           
             accountNumber: true,
             accountHolderName: true,
-            routingNumber: true,
+           
             ifscCode: true,
-            bankName: true,
-            branchName: true,
-            isDefault: true,
+          
+          
+        
             createdAt: true,
             updatedAt: true,
           },
@@ -105,8 +105,9 @@ export async function GET() {
             bankAccount: {
               select: {
                 id: true,
-                accountName: true,
-                bankName: true,
+                accountHolderName: true,
+                ifscCode: true,
+                accountNumber: true,
               },
             },
           },
@@ -160,15 +161,12 @@ export async function GET() {
         // Transform accounts data
         accounts: user.accounts.map(account => ({
           id: account.id,
-          accountName: account.accountName,
+         
           accountNumber: account.accountName, // Using accountName as accountNumber since it's not in schema
           accountHolderName: account.accountHolderName,
-          routingNumber: account.routingNumber,
+         
           ifscCode: account.ifscCode,
-          bankName: account.bankName,
-          branchName: account.branchName,
-          accountType: account.accountType,
-          isDefault: account.isDefault,
+         
           balance: 0, // Default balance since it's not in the schema
           currency: "USD", // Default currency
           type: account.accountType.toUpperCase() as "SAVINGS" | "CHECKING" | "CREDIT_CARD" | "LOAN" | "UNKNOWN",
@@ -191,8 +189,8 @@ export async function GET() {
           location: transaction.location,
           bankAccount: transaction.bankAccount ? {
             id: transaction.bankAccount.id,
-            accountName: transaction.bankAccount.accountName,
-            bankName: transaction.bankAccount.bankName,
+            accountHolderName: transaction.bankAccount.accountHolderName,
+            ifscCode: transaction.bankAccount.ifscCode,
           } : null,
         })),
       };
