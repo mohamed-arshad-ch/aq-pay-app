@@ -41,24 +41,46 @@ export async function GET() {
       return new NextResponse("User not found", { status: 404 });
     }
 
-    // Get wallet transactions using raw SQL
-    const transactions = await prisma.$queryRaw<Transaction[]>`
-      SELECT 
-        wt.*,
-        ba."accountName" as "bankAccountName"
-      FROM "WalletTransaction" wt
-      LEFT JOIN "Account" ba ON wt."bankAccountId" = ba.id
-      WHERE wt."userId" = ${userData.id}
-      ORDER BY wt.date DESC
-    `;
+    // Get both wallet and bank transactions
+    const [walletTransactions, bankTransactions] = await Promise.all([
+      prisma.$queryRaw<Transaction[]>`
+        SELECT 
+          wt.*,
+          ba."accountName" as "bankAccountName"
+        FROM "WalletTransaction" wt
+        LEFT JOIN "Account" ba ON wt."bankAccountId" = ba.id
+        WHERE wt."userId" = ${userData.id}
+      `,
+      prisma.$queryRaw<Transaction[]>`
+        SELECT 
+          t.*,
+          fromAccount."accountName" as "fromAccountName",
+          toAccount."accountName" as "toAccountName"
+        FROM "Transaction" t
+        LEFT JOIN "Account" fromAccount ON t."fromAccountId" = fromAccount.id
+        LEFT JOIN "Account" toAccount ON t."toAccountId" = toAccount.id
+        WHERE t."userId" = ${userData.id}
+      `
+    ]);
+
+    // Combine both types of transactions
+    const allTransactions = [...walletTransactions, ...bankTransactions];
+
+    // Sort transactions by date in descending order
+    const sortedTransactions = allTransactions.sort((a, b) => {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
 
     // Categorize transactions by status
+    // Categorize transactions by status
     const categorizedTransactions = {
-      all: transactions,
-      pending: transactions.filter((t) => t.status === "PENDING"),
-      rejected: transactions.filter((t) => t.status === "FAILED"),
-      completed: transactions.filter((t) => t.status === "COMPLETED"),
+      all: sortedTransactions,
+      pending: sortedTransactions.filter((t: Transaction) => t.status === "PENDING"),
+      rejected: sortedTransactions.filter((t: Transaction) => t.status === "FAILED"),
+      completed: sortedTransactions.filter((t: Transaction) => t.status === "COMPLETED"),
     };
+
+    return NextResponse.json(categorizedTransactions);
 
     return NextResponse.json(categorizedTransactions);
   } catch (error) {
