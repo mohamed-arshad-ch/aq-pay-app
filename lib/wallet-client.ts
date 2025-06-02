@@ -1,4 +1,4 @@
-import type { Wallet, WalletTransaction } from "@/types";
+import type { Wallet, WalletTransaction, User, BankAccount } from "@/types";
 import {
   WalletTransactionStatus,
   WalletStatus,
@@ -70,15 +70,25 @@ export async function fetchWalletTransactions(): Promise<WalletTransaction[]> {
   return response.json();
 }
 
-// Fetch all wallet transactions (admin only)
+// Fetch all wallet transactions (admin only) with user and account data
 export async function fetchAllWalletTransactions(): Promise<
-  WalletTransaction[]
+  (WalletTransaction & { user: User; account?: BankAccount })[]
 > {
-  const response = await fetch("/api/admin/wallet/transactions");
-  if (!response.ok) {
-    throw new Error("Failed to fetch all wallet transactions");
+  try {
+    const response = await fetch("/api/admin/wallet/transactions?include=user,account");
+    if (!response.ok) {
+      throw new Error("Failed to fetch all wallet transactions");
+    }
+    const transactions = await response.json();
+    return transactions.map((transaction: any) => ({
+      ...transaction,
+      user: transaction.user,
+      account: transaction.account
+    }));
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    throw error;
   }
-  return response.json();
 }
 
 // Add balance to wallet

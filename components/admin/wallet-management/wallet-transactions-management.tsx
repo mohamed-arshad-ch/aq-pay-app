@@ -10,7 +10,7 @@ import {
   fetchWalletTransactions,
   updateTransactionStatus as apiUpdateTransactionStatus,
 } from "@/lib/wallet-client";
-import type { WalletTransaction } from "@/types";
+import type { WalletTransaction, User, BankAccount } from "@/types";
 import { WalletTransactionStatus } from "@/types";
 import { formatCurrency } from "@/lib/currency-utils";
 import { formatDistanceToNow } from "date-fns";
@@ -18,7 +18,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -57,15 +56,14 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Filter,
   Copy,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { transferApi } from "@/lib";
 
 export function WalletTransactionsManagement() {
   const dispatch = useAppDispatch();
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [transactions, setTransactions] = useState<(WalletTransaction & { user: User; account?: BankAccount })[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<WalletTransaction | null>(null);
@@ -75,8 +73,6 @@ export function WalletTransactionsManagement() {
   );
   const [adminNote, setAdminNote] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [activeTab, setActiveTab] = useState("pending");
-  const [isEditing, setIsEditing] = useState(false);
   const [editedAmount, setEditedAmount] = useState("");
   const [editedLocation, setEditedLocation] = useState("");
   const [editedTime, setEditedTime] = useState("");
@@ -84,8 +80,23 @@ export function WalletTransactionsManagement() {
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
-      const allTransactions = await fetchWalletTransactions();
-      setTransactions(allTransactions);
+      const result = await transferApi.getTransactions();
+
+      // Filter only deposit transactions
+      const depositTransactions = result.transactions.filter((tx: WalletTransaction) => tx.type === 'DEPOSIT');
+
+      // Sort transactions by status order (PENDING first, CANCELLED/FAILED, then COMPLETED)
+      const sortedTransactions = depositTransactions.sort((a: WalletTransaction, b: WalletTransaction) => {
+        const statusOrder = {
+          [WalletTransactionStatus.PENDING]: 0,
+          [WalletTransactionStatus.CANCELLED]: 1,
+          [WalletTransactionStatus.FAILED]: 1,
+          [WalletTransactionStatus.COMPLETED]: 2
+        };
+        return statusOrder[a.status] - statusOrder[b.status];
+      });
+
+      setTransactions(sortedTransactions);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -122,13 +133,13 @@ export function WalletTransactionsManagement() {
         prev.map((tx) =>
           tx.id === selectedTransaction.id
             ? {
-                ...tx,
-                status: newStatus,
-                adminNote,
-                amount: parseFloat(editedAmount),
-                location: editedLocation,
-                date: editedTime,
-              }
+              ...tx,
+              status: newStatus,
+              adminNote,
+              amount: parseFloat(editedAmount),
+              location: editedLocation,
+              date: editedTime,
+            }
             : tx
         )
       );
@@ -146,13 +157,13 @@ export function WalletTransactionsManagement() {
       const notificationMessage =
         newStatus === WalletTransactionStatus.COMPLETED
           ? `Your send request of ${formatCurrency(
-              selectedTransaction.amount,
-              selectedTransaction.currency
-            )} has been approved.`
+            selectedTransaction.amount,
+            selectedTransaction.currency
+          )} has been approved.`
           : `Your send request of ${formatCurrency(
-              selectedTransaction.amount,
-              selectedTransaction.currency
-            )} has been rejected.${adminNote ? ` Reason: ${adminNote}` : ""}`;
+            selectedTransaction.amount,
+            selectedTransaction.currency
+          )} has been rejected.${adminNote ? ` Reason: ${adminNote}` : ""}`;
 
       dispatch(
         addNotification({
@@ -170,11 +181,15 @@ export function WalletTransactionsManagement() {
 
       toast({
         title: "Status Updated",
-        description: `Transaction status has been updated to ${newStatus.toLowerCase()}.`,
+        description: `Transaction status has been updated to ${newStatus === WalletTransactionStatus.COMPLETED ? 'approved' : 'rejected'
+          }.`,
       });
 
       setIsDialogOpen(false);
       setAdminNote("");
+
+      // Re-fetch transactions to get updated order
+      await fetchTransactions();
     } catch (error) {
       toast({
         variant: "destructive",
@@ -195,10 +210,11 @@ export function WalletTransactionsManagement() {
       return;
     }
     setSelectedTransaction(transaction);
-    setNewStatus(transaction.status);
+    setNewStatus(WalletTransactionStatus.COMPLETED); // Default to approve
     setEditedAmount(transaction.amount.toString());
     setEditedLocation(transaction.location || "");
     setEditedTime(transaction.date);
+    setAdminNote("");
     setIsDialogOpen(true);
   };
 
@@ -240,26 +256,10 @@ export function WalletTransactionsManagement() {
     }
   };
 
-  const filteredTransactions = transactions.filter((tx) => {
-    switch (activeTab) {
-      case "pending":
-        return tx.status === WalletTransactionStatus.PENDING;
-      case "approved":
-        return tx.status === WalletTransactionStatus.COMPLETED;
-      case "rejected":
-        return (
-          tx.status === WalletTransactionStatus.FAILED ||
-          tx.status === WalletTransactionStatus.CANCELLED
-        );
-      default:
-        return true;
-    }
-  });
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Send Requests</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold">Deposit Requests</h2>
         <Button
           variant="outline"
           size="sm"
@@ -277,131 +277,119 @@ export function WalletTransactionsManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Send Requests Management</CardTitle>
+          <CardTitle>Deposit Requests Management</CardTitle>
           <CardDescription>
-            Review and manage send requests from users
+            Review and manage deposit requests from users.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs
-            defaultValue="pending"
-            className="w-full"
-            onValueChange={setActiveTab}
-          >
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="pending">
-                <Clock className="h-4 w-4 mr-2" />
-                Pending
-              </TabsTrigger>
-              <TabsTrigger value="approved">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approved
-              </TabsTrigger>
-              <TabsTrigger value="rejected">
-                <XCircle className="h-4 w-4 mr-2" />
-                Rejected
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={activeTab}>
-              {isLoading ? (
-                <div className="flex justify-center items-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : filteredTransactions.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No {activeTab} send requests found.</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Bank Account</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No send requests found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[120px]">ID</TableHead>
+                    <TableHead className="min-w-[150px]">User Name</TableHead>
+                    <TableHead className="min-w-[100px]">Amount</TableHead>
+                    <TableHead className="min-w-[150px]">Bank Account</TableHead>
+                    <TableHead className="min-w-[120px]">Date</TableHead>
+                    <TableHead className="min-w-[100px]">Status</TableHead>
+                    <TableHead className="text-right min-w-[120px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate max-w-[100px]">
                             {transaction.id}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4"
-                              onClick={() => {
-                                if (transaction.reference) {
-                                  navigator.clipboard.writeText(
-                                    transaction.reference
-                                  );
-                                  toast({
-                                    title: "Reference Copied",
-                                    description:
-                                      "Transaction reference copied to clipboard",
-                                  });
-                                }
-                              }}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell>{transaction.userId}</TableCell>
-                        <TableCell>
-                          {formatCurrency(
-                            transaction.amount,
-                            transaction.currency
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 flex-shrink-0"
+                            onClick={() => {
+                              if (transaction.reference) {
+                                navigator.clipboard.writeText(
+                                  transaction.reference
+                                );
+                                toast({
+                                  title: "Reference Copied",
+                                  description:
+                                    "Transaction reference copied to clipboard",
+                                });
+                              }
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="truncate font-medium">
+                            {transaction.user?.username || transaction.userId}
+                          </span>
+                          {transaction.account?.accountName && (
+                            <span className="text-sm text-muted-foreground truncate">
+                              {transaction.account.accountName}
+                            </span>
                           )}
-                        </TableCell>
-                        <TableCell>{transaction.paymentMethod}</TableCell>
-                        <TableCell>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(
+                          transaction.amount,
+                          transaction.currency
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="truncate max-w-[130px] block">
+                          {transaction.paymentMethod}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
                           {formatDistanceToNow(new Date(transaction.date), {
                             addSuffix: true,
                           })}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(transaction.status)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {transaction.status ===
-                            WalletTransactionStatus.PENDING && (
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(transaction.status)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {transaction.status ===
+                          WalletTransactionStatus.PENDING && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => openStatusDialog(transaction)}
                             >
-                              Update Status
+                              Update
                             </Button>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </TabsContent>
-          </Tabs>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
-        <CardFooter className="border-t pt-4 text-sm text-muted-foreground">
-          <p>
-            {activeTab === "pending" &&
-              "Pending requests await your approval or rejection."}
-            {activeTab === "approved" &&
-              "Approved requests have been processed and funds have been deducted from users' wallets."}
-            {activeTab === "rejected" &&
-              "Rejected requests have been cancelled and funds remain in users' wallets."}
-          </p>
-        </CardFooter>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Update Transaction Status</DialogTitle>
             <DialogDescription>
@@ -410,110 +398,124 @@ export function WalletTransactionsManagement() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedTransaction && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Reference</p>
-                  <p className="font-medium">{selectedTransaction.reference}</p>
+          <div className="overflow-y-auto max-h-[60vh] pr-2">
+            {selectedTransaction && (
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Reference</p>
+                    <p className="font-medium break-all">{selectedTransaction.reference}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">User</p>
+                    <p className="font-medium">
+                      {selectedTransaction.userName || selectedTransaction.userId}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">User ID</p>
-                  <p className="font-medium">{selectedTransaction.userId}</p>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount">Amount</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        value={editedAmount}
+                        onChange={(e) => setEditedAmount(e.target.value)}
+                        placeholder="Enter amount"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        value={editedLocation}
+                        onChange={(e) => setEditedLocation(e.target.value)}
+                        placeholder="Enter location"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="time">Time</Label>
+                    <Input
+                      id="time"
+                      type="datetime-local"
+                      value={editedTime}
+                      onChange={(e) => setEditedTime(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={newStatus}
+                      onValueChange={(value) =>
+                        setNewStatus(value as WalletTransactionStatus)
+                      }
+                    >
+                      <SelectTrigger id="status">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={WalletTransactionStatus.COMPLETED}>
+                          <div className="flex items-center">
+                            <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                            Approve
+                          </div>
+                        </SelectItem>
+                        <SelectItem value={WalletTransactionStatus.FAILED}>
+                          <div className="flex items-center">
+                            <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                            Reject
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="adminNote">Admin Note (Optional)</Label>
+                    <Textarea
+                      id="adminNote"
+                      placeholder="Add a note about this decision"
+                      value={adminNote}
+                      onChange={(e) => setAdminNote(e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  </div>
                 </div>
               </div>
+            )}
+          </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={editedAmount}
-                    onChange={(e) => setEditedAmount(e.target.value)}
-                    placeholder="Enter amount"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={editedLocation}
-                    onChange={(e) => setEditedLocation(e.target.value)}
-                    placeholder="Enter location"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="time">Time</Label>
-                  <Input
-                    id="time"
-                    type="datetime-local"
-                    value={editedTime}
-                    onChange={(e) => setEditedTime(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={newStatus}
-                    onValueChange={(value) =>
-                      setNewStatus(value as WalletTransactionStatus)
-                    }
-                  >
-                    <SelectTrigger id="status">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={WalletTransactionStatus.COMPLETED}>
-                        <div className="flex items-center">
-                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                          Approve
-                        </div>
-                      </SelectItem>
-                      <SelectItem value={WalletTransactionStatus.FAILED}>
-                        <div className="flex items-center">
-                          <XCircle className="h-4 w-4 mr-2 text-red-500" />
-                          Reject
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="adminNote">Admin Note (Optional)</Label>
-                  <Textarea
-                    id="adminNote"
-                    placeholder="Add a note about this decision"
-                    value={adminNote}
-                    onChange={(e) => setAdminNote(e.target.value)}
-                  />
-                </div>
-              </div>
+          <DialogFooter className="border-t pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                disabled={isUpdating}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleStatusChange}
+                disabled={isUpdating}
+                className="w-full sm:w-auto"
+              >
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Transaction"
+                )}
+              </Button>
             </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDialogOpen(false)}
-              disabled={isUpdating}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleStatusChange} disabled={isUpdating}>
-              {isUpdating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Transaction"
-              )}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

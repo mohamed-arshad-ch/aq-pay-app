@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, FileText, Home, Settings, Users } from "lucide-react"
+import { BarChart3, FileText, Home, Settings, Users, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function AdminBottomNav() {
@@ -20,6 +20,12 @@ export function AdminBottomNav() {
       href: "/admin/transactions",
       icon: BarChart3,
       active: pathname.startsWith("/admin/transactions"),
+    },
+    {
+      name: "Wallet",
+      href: "/admin/wallet",
+      icon: Wallet,
+      active: pathname.startsWith("/admin/wallet"),
     },
     {
       name: "Users",
