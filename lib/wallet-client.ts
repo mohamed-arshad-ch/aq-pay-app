@@ -138,7 +138,7 @@ export async function sendWalletBalance(
 }
 
 // Update transaction status (for admin use)
-export const updateTransactionStatus = async (
+export async function updateTransactionStatus(
   transactionId: string,
   status: WalletTransactionStatus,
   adminNote?: string,
@@ -151,16 +151,17 @@ export const updateTransactionStatus = async (
   transaction: WalletTransaction;
   walletUpdated?: boolean;
   newBalance?: number;
-}> => {
+}> {
   try {
     const response = await fetch(
-      `/api/admin/wallet/transactions/${transactionId}`,
+      `/api/transfer/status`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          id: transactionId,
           status,
           adminNote,
           ...updates,
