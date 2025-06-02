@@ -127,9 +127,18 @@ export function AccountDetails({ id }: AccountDetailsProps) {
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      const response = await fetch(`/api/user/accounts/${id}`, {
+      const response = await fetch(`/api/user/accounts/details`, {
         method: "DELETE",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete account");
+      }
 
       if (!response.ok) {
         throw new Error("Failed to delete account");
@@ -155,16 +164,16 @@ export function AccountDetails({ id }: AccountDetailsProps) {
 
   const handleToggleDefault = async (newDefaultStatus: boolean) => {
     if (!account) return;
-    
+
     try {
       setIsUpdatingDefault(true);
-      const response = await fetch(`/api/user/accounts/${id}`, {
+      const response = await fetch(`/api/user/accounts/details`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          isDefault: newDefaultStatus 
+        body: JSON.stringify({
+          isDefault: newDefaultStatus, id
         }),
       });
 
@@ -175,11 +184,11 @@ export function AccountDetails({ id }: AccountDetailsProps) {
 
       // Update local state
       setAccount(prev => prev ? { ...prev, isDefault: newDefaultStatus } : null);
-      
+
       toast({
         title: newDefaultStatus ? "Set as default account" : "Removed as default account",
-        description: newDefaultStatus 
-          ? "This account is now your default account." 
+        description: newDefaultStatus
+          ? "This account is now your default account."
           : "This account is no longer your default account.",
       });
     } catch (error) {
@@ -298,8 +307,8 @@ export function AccountDetails({ id }: AccountDetailsProps) {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label 
-                    htmlFor="default-toggle" 
+                  <Label
+                    htmlFor="default-toggle"
                     className="text-sm font-medium"
                   >
                     Default Account

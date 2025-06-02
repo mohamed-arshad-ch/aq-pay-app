@@ -30,7 +30,25 @@ interface PrismaUser {
     createdAt: Date;
     updatedAt: Date;
   }[];
-};
+  transactions: {
+    id: string;
+    amount: number;
+    currency: string;
+    type: string;
+    status: string;
+    description: string | null;
+    fee: number;
+    date: Date;
+    createdAt: Date;
+    updatedAt: Date;
+    location: string | null;
+    bankAccount: {
+      id: string;
+      accountName: string;
+      bankName: string;
+    } | null;
+  }[];
+}
 
 export async function GET() {
   try {
@@ -70,11 +88,39 @@ export async function GET() {
             createdAt: "desc",
           },
         },
+        // Include transaction data
+        transactions: {
+          select: {
+            id: true,
+            amount: true,
+            currency: true,
+            type: true,
+            status: true,
+            description: true,
+            fee: true,
+            date: true,
+            createdAt: true,
+            updatedAt: true,
+            location: true,
+            bankAccount: {
+              select: {
+                id: true,
+                accountName: true,
+                bankName: true,
+              },
+            },
+          },
+          orderBy: {
+            date: "desc",
+          },
+          take: 10, // Limit to recent 10 transactions for performance
+        },
       },
       orderBy: {
         createdAt: "desc",
       },
     });
+
     // Get transaction volumes for all users in a single query
     const transactionVolumes = await prisma.walletTransaction.groupBy({
       by: ['userId'],
@@ -129,6 +175,25 @@ export async function GET() {
           status: account.isDefault ? "ACTIVE" : "PENDING",
           createdAt: account.createdAt.toISOString(),
           updatedAt: account.updatedAt.toISOString(),
+        })),
+        // Transform transactions data
+        transactions: user.transactions.map(transaction => ({
+          id: transaction.id,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          type: transaction.type,
+          status: transaction.status,
+          description: transaction.description,
+          fee: transaction.fee,
+          date: transaction.date.toISOString(),
+          createdAt: transaction.createdAt.toISOString(),
+          updatedAt: transaction.updatedAt.toISOString(),
+          location: transaction.location,
+          bankAccount: transaction.bankAccount ? {
+            id: transaction.bankAccount.id,
+            accountName: transaction.bankAccount.accountName,
+            bankName: transaction.bankAccount.bankName,
+          } : null,
         })),
       };
     });

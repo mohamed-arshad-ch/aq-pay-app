@@ -24,11 +24,31 @@ export interface Account {
 
 }
 
+export interface Transaction {
+  id: string;
+  amount: number;
+  currency: string;
+  type: string;
+  status: string;
+  description: string | null;
+  fee: number;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+  location: string | null;
+  bankAccount: {
+    id: string;
+    accountName: string;
+    bankName: string;
+  } | null;
+}
+
 export interface User {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  transactions: Transaction[];
   phoneNumber: string | null;
   createdAt: string; // Changed to string to match serialized Date from API
   lastLogin: string; // Changed to string to match serialized Date from API
