@@ -3,10 +3,8 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 
-// Get account details by ID using POST request
-export async function POST(
-  request: NextRequest
-) {
+// Handle all account operations through POST requests
+export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token");
@@ -21,7 +19,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { id } = body;
+    const { action, id } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -30,11 +28,40 @@ export async function POST(
       );
     }
 
-    // Use the ID from the request body
+    // Handle different actions
+    switch (action) {
+      case "get":
+      case undefined: // Default action for backward compatibility
+        return await handleGetAccount(id, userData.id);
+      
+      case "update":
+        return await handleUpdateAccount(id, userData.id, body);
+      
+      case "delete":
+        return await handleDeleteAccount(id, userData.id);
+      
+      default:
+        return NextResponse.json(
+          { error: "Invalid action. Supported actions: get, update, delete" },
+          { status: 400 }
+        );
+    }
+  } catch (error) {
+    console.error("Error in account details API:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// Get account details
+async function handleGetAccount(accountId: string, userId: string) {
+  try {
     const account = await prisma.account.findUnique({
       where: {
-        id,
-        userId: userData.id,
+        id: accountId,
+        userId: userId,
       },
       include: {
         user: {
@@ -55,23 +82,16 @@ export async function POST(
       );
     }
 
-    // Add debug logging
     console.log('Found account:', {
       id: account.id,
-      accountName: account.accountName,
+      accountHolderName: account.accountHolderName,
       accountNumber: account.accountNumber
     });
 
-    // Ensure we're returning a proper JSON response
     return NextResponse.json({
-      account: {
-        ...account,
-        // Convert Prisma's Decimal type to string for accountNumber
-        accountNumber: account.accountNumber.toString(),
-        // Convert Prisma's DateTime type to string for createdAt, updatedAt
-        createdAt: account.createdAt?.toISOString(),
-        updatedAt: account.updatedAt?.toISOString(),
-      }
+      ...account,
+      createdAt: account.createdAt?.toISOString(),
+      updatedAt: account.updatedAt?.toISOString(),
     });
   } catch (error) {
     console.error("Error fetching account:", error);
@@ -82,38 +102,16 @@ export async function POST(
   }
 }
 
-// Update an account
-export async function PUT(
-  request: NextRequest
-) {
+// Update account
+async function handleUpdateAccount(accountId: string, userId: string, body: any) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token");
-
-    if (!token?.value) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userData = await verifyToken(token.value);
-    if (!userData) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { id, isDefault, accountName, accountType, accountHolderName, ifscCode, routingNumber, branchName, currency } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Account ID is required" },
-        { status: 400 }
-      );
-    }
+    const { accountHolderName, accountNumber, ifscCode } = body;
 
     // Check if the account exists and belongs to the user
     const existingAccount = await prisma.account.findFirst({
       where: {
-        id,
-        userId: userData.id,
+        id: accountId,
+        userId: userId,
       },
     });
 
@@ -121,34 +119,15 @@ export async function PUT(
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
-    // If setting as default, unset other default accounts for the user
-    if (isDefault === true) {
-      await prisma.account.updateMany({
-        where: {
-          userId: userData.id,
-          isDefault: true,
-          id: { not: id },
-        },
-        data: {
-          isDefault: false,
-        },
-      });
-    }
-
     // Update the account
     const updatedAccount = await prisma.account.update({
       where: {
-        id,
+        id: accountId,
       },
       data: {
-        isDefault,
-        accountName,
-        accountType,
         accountHolderName,
+        accountNumber,
         ifscCode,
-        routingNumber,
-        branchName,
-        currency,
       },
     });
 
@@ -162,64 +141,34 @@ export async function PUT(
   }
 }
 
-// Delete an account
-export async function DELETE(
-  request: NextRequest
-) {
+// Delete account
+async function handleDeleteAccount(accountId: string, userId: string) {
   try {
-    console.log('DELETE request received');
+    console.log('DELETE request for account:', accountId);
     
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token");
-    console.log('Auth token:', token?.value ? 'Present' : 'Missing');
-
-    if (!token?.value) {
-      console.error('No auth token found');
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userData = await verifyToken(token.value);
-    if (!userData) {
-      console.error('Invalid token verification');
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
-
-    console.log('Authenticated user:', userData.id);
-    
-    const body = await request.json();
-    console.log('Request body:', body);
-    const { id } = body;
-
-    if (!id) {
-      console.error('No account ID provided');
-      return NextResponse.json(
-        { error: "Account ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // First check if the account exists and belongs to the user
-    const account = await prisma.account.findUnique({
+    // Check if the account exists and belongs to the user
+    const existingAccount = await prisma.account.findFirst({
       where: {
-        id,
-        userId: userData.id,
+        id: accountId,
+        userId: userId,
       },
     });
 
-    if (!account) {
-      console.error('Account not found for user:', userData.id);
+    if (!existingAccount) {
+      console.error('Account not found for user:', userId);
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
-    // Then delete the account
+    console.log('Found account to delete:', existingAccount.id);
+
+    // Delete the account
     await prisma.account.delete({
       where: {
-        id,
-        userId: userData.id,
+        id: accountId,
       },
     });
 
-    console.log('Account deleted successfully:', id);
+    console.log('Account deleted successfully');
     return NextResponse.json({ message: "Account deleted successfully" });
   } catch (error) {
     console.error("Error deleting account:", error);

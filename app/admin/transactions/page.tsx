@@ -221,16 +221,16 @@ export default function AdminTransactionsPage() {
   };
 
   const pendingTransactions = filteredTransactions.filter(
-    (t: Transaction) => t.status === WalletTransactionStatus.PENDING
+    (t: any) => t.status === "PENDING"
   );
   const processingTransactions = filteredTransactions.filter(
-    (t: Transaction) => t.status === WalletTransactionStatus.PROCESSING
+    (t: any) => t.status === "PROCESSING"
   );
   const rejectedTransactions = filteredTransactions.filter(
-    (t: Transaction) => t.status === WalletTransactionStatus.CANCELLED
+    (t: any) => t.status === "REJECTED" || t.status === "CANCELLED"
   );
   const completedTransactions = filteredTransactions.filter(
-    (t: Transaction) => t.status === WalletTransactionStatus.COMPLETED
+    (t: any) => t.status === "COMPLETED"
   );
 
   const totalAmount = filteredTransactions.reduce(

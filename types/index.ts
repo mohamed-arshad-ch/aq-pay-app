@@ -72,17 +72,8 @@ export interface BankAccount {
   id: string;
   userId: string;
   accountNumber: string;
-  accountName: string;
-  accountHolderName?: string;
-  accountType: AccountType;
-  bankName: string;
-  routingNumber?: string;
-  ifscCode?: string;
-  branchName?: string;
-  balance: number;
-  currency: string;
-  isDefault: boolean;
-  status: AccountStatus;
+  accountHolderName: string;
+  ifscCode: string;
   createdAt: string;
   updatedAt: string;
 }
